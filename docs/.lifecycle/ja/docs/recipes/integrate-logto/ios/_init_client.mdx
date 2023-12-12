@@ -1,0 +1,21 @@
+```swift
+import Logto
+import LogtoClient
+
+let config = try? LogtoConfig(
+  endpoint: "<your-logto-endpoint>", // E.g. http://localhost:3001
+  appId: "<your-app-id>"
+)
+let client = LogtoClient(useConfig: config)
+```
+
+デフォルトでは、IDトークンやリフレッシュトークンなどの資格情報はキーチェーンに保存されます。したがって、ユーザーは再度サインインする必要がありません。
+
+この動作をオフにするには、「usingPersistStorage」を「false」に設定します。
+
+```swift
+let config = try? LogtoConfig(
+  // ...
+  usingPersistStorage: false
+)
+```

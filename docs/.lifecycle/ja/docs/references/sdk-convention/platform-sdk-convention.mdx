@@ -1,0 +1,29 @@
+---
+sidebar_position: 1.3
+---
+
+import PlatformBasicTypes from './fragments/_platform_basic_types.md';
+import PlatformLogtoClientMethods from './fragments/_platform_logto_client_methods.md';
+import PlatformLogtoClientProperties from './fragments/_platform_logto_client_properties.md';
+
+# プラットフォームSDK
+
+プラットフォームSDKは、特定のプラットフォームでクライアントをLogtoサービスと統合する標準的な方法を提供し、統合プロセスを加速します。
+
+- プラットフォームSDKは、[コア](./core-sdk-convention.mdx)をプラットフォーム固有の実装でカプセル化します。
+- プラットフォームSDKは、SDKをより使いやすくする基本的な型を提供する必要があります。
+- プラットフォームSDKは、`LogtoClient`という名前のクラスとしてエクスポートされる必要があります。
+
+## 基本的な型
+
+<PlatformBasicTypes />
+
+## LogtoClient
+
+### プロパティ
+
+<PlatformLogtoClientProperties />
+
+### メソッド
+
+<PlatformLogtoClientMethods />

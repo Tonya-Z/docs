@@ -1,0 +1,79 @@
+---
+sidebar_label: コネクタファイル構造
+sidebar_position: 1
+---
+
+# コネクタファイル構造
+
+以下は、TypeScriptプロジェクトとしてコネクタのファイルがどのように構成されているかを示すファイルツリーです。
+
+名前が`^`で終わるファイルはオプションのファイルを示し、それ以外は必須です。
+
+```
+ConnectorRootDir/
+├── package.extend.json
+├── README.md
+├── logo.svg
+├── logo-dark.svg^
+├── docs/
+│   └── configTemplate.json
+└── src/
+    ├── index.ts
+    ├── index.test.ts
+    ├── types.ts
+    ├── constant.ts
+    ├── mock.ts^
+    ├── utils.ts^
+    ├── utils.test.ts^
+    └── ...
+```
+
+コネクタファイルの構造に基づいて、各ファイルを見て全体としてどのように機能するかを理解していきましょう。
+
+## package.extend.json
+
+`package.extend.json` には、このコネクタリポジトリの設定が含まれています。共通の依存関係や属性を含む共有 `package.json` とマージされます。
+
+## README.md
+
+`README.md` は、コネクタの構成を設定するための詳細なガイドです。
+
+## logo.svg
+
+`logo.svg` は、ベクトル画像形式でコネクタのロゴを保存するファイルです。
+
+## logo-dark.svg
+
+`logo-dark.svg` ファイルには、コネクタのダークモードのロゴのベクトルグラフィックが含まれています。
+
+:::note
+`logo.svg` と `logo-dark.svg` の関係については、[コネクターロゴ](../../references/connectors/#logo) を参照してください。
+:::
+
+## configTemplate.json
+
+`configTemplate.json` は、コネクタ構成の例を示しています。
+
+## index.ts
+
+`index.ts` は、コネクタクラスの実装のためのファイルです。
+
+## index.test.ts
+
+`index.test.ts` は、`index.ts` の実装に対応するユニットテスト（UTs）を含むファイルです。
+
+## types.ts
+
+`types.ts` は、変数の型を定義する場所です。
+
+## constant.ts
+
+`constant.ts` は、エンドポイント、コネクタメタデータなどコネクタに関連する定数を定義する場所です。
+
+## mock.ts
+
+`mock.ts` は、テスト目的のための模擬値を置くことができるファイルです。
+
+## utils.ts
+
+`utils.ts` は、開発者がユーティリティ関数を置くファイルであり、`utils.test.ts`には関連するUTsを含めるべきです。

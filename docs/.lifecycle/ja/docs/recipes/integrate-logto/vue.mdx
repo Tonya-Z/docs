@@ -1,0 +1,199 @@
+---
+sidebar_label: Vue
+---
+
+@theme/Admonition から Admonition を import;
+@theme/TabItem から TabItem を import;
+@theme/Tabs から Tabs を import;
+
+redirectUriFigure を './assets/web-redirect-uri.png' から import;
+'./fragments/_app-note.mdx' から AppNote を import;
+'./fragments/_apply_authorization_token.md' から ApplyAuthorizationToken を import;
+'./fragments/_configure-redirect-uri.mdx' から ConfigureRedirectUri を import;
+'./fragments/_fetch-user-information.mdx' から FetchUserInformation を import;
+'./fragments/_further-readings.md' から FurtherReadings を import;
+'./fragments/_get_authorization_token.md' から GetAuthorizationToken を import;
+'./fragments/_sign-in-note.mdx' から SignInNote を import;
+'./fragments/_web-assuming-url.md' から AssumingUrl を import;
+'./fragments/_web-sign-in-flow-summary.mdx' から SignInFlowSummary を import;
+'./fragments/_web-sign-out-note.md' から SignOutNote を import;
+
+# Vue: `@logto/vue` を統合
+
+<AppNote type="Single Page App" />
+
+## Logto SDK を依存関係として追加
+
+<Tabs>
+
+  <TabItem value="npm" label="npm">
+
+```bash
+npm i @logto/vue
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="Yarn">
+
+```bash
+yarn add @logto/vue
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @logto/vue
+```
+
+  </TabItem>
+
+</Tabs>
+
+<Admonition type="note">
+  現時点では Vue 3 Composition API のみサポートしています。将来のリリースで Vue Options API および必要に応じて Vue 2 への対応を追加します。
+</Admonition>
+
+## LogtoClient を初期化
+
+Logto プラグインをインストールするには、`createLogto` をimportして使用してください。
+
+```ts
+import { createLogto, LogtoConfig } from '@logto/vue';
+
+const config: LogtoConfig = {
+  endpoint: '<your-logto-endpoint>', // 例: http://localhost:3001
+  appId: '<your-application-id>',
+};
+
+const app = createApp(App);
+
+app.use(createLogto, config);
+app.mount('#app');
+```
+
+<AssumingUrl />
+
+## サインイン
+
+<SignInFlowSummary />
+
+### リダイレクト URI を設定
+
+<ConfigureRedirectUri figureSrc={redirectUriFigure} redirectUri="http://localhost:3000/callback" />
+
+### サインインボタンを実装
+
+認証フローを簡単に管理できるよう、2つのコンポーザブル `useHandleSignInCallback()` と `useLogto()` を提供しています。
+
+<SignInNote calling=".signIn()" />
+
+IDE / エディタに戻り、以下のコードを使用してサインインボタンを実装してください：
+
+```ts
+import { useLogto } from '@logto/vue';
+
+const { signIn, isAuthenticated } = useLogto();
+const onClickSignIn = () => signIn('http://localhost:3000/callback');
+```
+
+```html
+<div v-if="isAuthenticated">
+  <div>サインイン済み</div>
+</div>
+<div v-else>
+  <button @click="onClickSignIn">サインイン</button>
+</div>
+```
+
+### リダイレクトを処理
+
+あと少しです！ 最後のステップでは、リダイレクト URI として `http://localhost:3000/callback` を使用し、これを適切に処理する必要があります。
+
+まず、コールバックコンポーネントを作成しましょう：
+
+```ts
+// CallbackView.vue
+import { useHandleSignInCallback } from '@logto/vue';
+const { isLoading } = useHandleSignInCallback(() => {
+  // 完了時にルートパスに移動
+});
+```
+
+```html
+<template>
+  <!-- 作業中の場合 -->
+  <p v-if="isLoading">リダイレクト中...</p>
+</template>
+```
+
+最後に、認証が必要ない `/callback` ルートに以下のコードを挿入してください：
+
+```ts
+// vue-router を想定
+const router = createRouter({
+  routes: [
+    {
+      path: '/callback',
+      name: 'callback',
+      component: CallbackView,
+    },
+  ],
+});
+```
+
+## サインアウト
+
+<SignOutNote />
+
+### サインアウトボタンを実装
+
+```ts
+import { useLogto } from '@logto/vue';
+
+const { signOut } = useLogto();
+const onClickSignOut = () => signOut('http://localhost:3000');
+```
+
+```html
+<button @click="onClickSignOut">サインアウト</button>
+```
+
+## ユーザー情報の取得
+
+<FetchUserInformation apiCodeFragment="fetchUserInfo()" />
+
+## バックエンド API 認可
+
+<GetAuthorizationToken />
+
+Logto SDK の構成に API リソースインジケータを追加してください：
+
+```js
+import { createLogto, LogtoConfig } from '@logto/vue';
+
+const config: LogtoConfig = {
+  appId: '<your-application-id>',
+  endpoint: '<your-logto-endpoint>',
+  resources: ['<your-api-resource>'],
+};
+
+const app = createApp(App);
+
+app.use(createLogto, config);
+app.mount('#app');
+```
+
+API リクエストを行う前に、Logto から認可トークンを要求してください：
+
+```js
+const { getAccessToken } = useLogto();
+const token = await getAccessToken('<your-target-api-resource>');
+// カスタムロジック
+```
+
+<ApplyAuthorizationToken />
+
+## その他の読み物
+
+<FurtherReadings />

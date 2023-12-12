@@ -1,0 +1,111 @@
+---
+sidebar_position: 8
+---
+
+import bookstoreRoles from './assets/bookstore-roles.png';
+import bookstoreSetup from './assets/bookstore-setup.png';
+import permissions from './assets/permissions.png';
+import roleOrderAdmin from './assets/role-order-admin.png';
+
+# 🔐 RBAC（Role Based Access Control）
+
+## イントロ
+
+RBAC（ロールベースアクセス制御）は、ユーザーに対して役割に基づいて権限を割り当てる手法です。ロールの認可を通じてリソースへのアクセスを制御することで、RBACは以下の観点で役立ちます：
+
+- _**セキュリティの向上**_ ロールに基づいて権限を割り当てることで、必要な人物だけがリソースにアクセスできるように制限され、不正なアクセスやデータ漏洩のリスクを減らします。
+- _**効率の向上**_ RBACは、ロールと権限の迅速かつ容易な追加や変更を可能にし、API全体にそれらを実装するため、多数のユーザーのアクセス権を簡単に管理できます。
+- _**管理オーバーヘッドの削減**_ RBACは、権限の手動割り当ての必要をなくし、潜在的なエラーを減らします。
+- _**規制順守の向上**_ RBACは、機密保持やプライバシーの規制および法的要件に準拠する組織に役立ち、機密データへのアクセスを認可されたユーザーだけに制限します。
+- _**柔軟性**_ RBACは組織の特定のニーズに合わせて簡単にカスタマイズおよび適応でき、多目的なアクセス制御手法となります。
+- _**拡張性**_ RBACは、中小企業から大企業までのあらゆる規模の組織に実装でき、必要に応じて簡単にスケーリングできます。
+
+## LogtoにおけるRBAC
+
+Logtoでは、最も標準的かつ拡張可能な方法を用いてRBACを実装し、さまざまなシナリオに対応しています。それがどのように機能するかを理解するために、重要な用語に精通することが重要です。
+
+### 権限（スコープ）
+
+権限はリソースにアクセスするための認可を指します（当社では[APIリソース](/docs/references/resources/)と呼んでいます）。実際の世界では、注文、製品、文書などのエンティティをリソースとして指定し、さまざまなアクションを割り当てることができます。
+
+:::info note
+"Permission"は[OAuth 2.0](https://oauth.net/2/scope/)における"scope"と同様の意味です。当社はビジネスに直感的な表現であるため、「Permission」としています。
+:::
+
+権限の例として、注文の編集、文書の読み取り、製品の削除などがあります：
+
+- `write:orders`
+- `read:documents`
+- `delete:products`
+
+Logtoでは、権限は**常に**APIリソースに属しています。
+
+<img width="500" src={permissions} alt="Permissions" />
+
+上記の図は、リソース`https://api-1.store.io`の権限`read:item`と、リソース`https://api-2.store.io`の権限`read:item`が異なることを示しています。
+
+APIリソースが指定されていない場合、権限は「OIDC用」として扱われます。通常、これはRBACで望ましい動作ではありません。
+
+### ロール
+
+ロールは、ユーザーに割り当てることができる権限の_グループ_です。また、異なるAPIに定義された権限をまとめて集約する方法を提供し、個々のユーザーに個別に割り当てるよりも追加、削除、または調整を効率化します。
+
+`order_admin`ロールの権限を持つ例：
+
+<img width="550" src={roleOrderAdmin} alt="Role order_admin" />
+
+また、ロール間で権限が重複することも問題ありません。
+
+## 例：オンライン書店
+
+オンライン書店の管理を例にとってみましょう。ここでは、デモンストレーション目的にアクセス制御モデルを大幅に単純化します。
+
+モデルは、2つの主要なAPIリソースに分割されます：注文と製品。それぞれ異なるリソース指示子があります：
+
+- 注文：`https://api.store.io/orders`
+- 製品：`https://api.store.io/products`
+
+各リソースについて、読み取り、書き込み、削除の権限を分離したいとします。そのため、合計6つの権限を定義します：
+
+- `https://api.store.io/orders`
+  - 権限 `read:order`
+  - 権限 `write:order`
+  - 権限 `delete:order`
+- `https://api.store.io/products`
+  - 権限 `read:product`
+  - 権限 `write:product`
+  - 権限 `delete:product`
+
+このモデルのイラストは以下の通りです：
+
+<img width="500" src={bookstoreSetup} alt="Bookstore setup" />
+
+注文管理者と製品管理者の2種類の管理者がほしいとします：
+
+- _**注文管理者**_ は注文を管理し、製品を表示できます（注文は製品で構成されているため）、ただし、製品を管理することはできません。
+- _**製品管理者**_ は製品を管理できますが、注文については知らないでしょう。
+
+そのため、`order_admin`と`product_admin`の2つのロールを作成し、それぞれ以下の権限を持たせます：
+
+- `order_admin`
+  - `https://api.store.io/orders`
+    - `read:order`、`write:order`、`delete:order`
+  - `https://api.store.io/products`
+    - `read:product`
+- `product_admin`
+  - `https://api.store.io/products`
+    - `read:product`、`write:product`、`delete:product`
+
+これら2つのロールのイラストは以下の通りです：
+
+<img width="800" src={bookstoreRoles} alt="Bookstore roles" />
+
+`order_admin`は`read:product`の権限を`product_admin`と共有しており、ユーザーが保持する最終的な権限は、割り当てられたすべてのロールからのすべての権限の合併です。
+
+## まとめ
+
+権限とロールという2つの新しい用語を紹介しました。以下にまとめます：
+
+- APIリソースは複数の権限を保持できます。
+- 権限について話すとき、実際には「APIリソースの権限」について話していることになります。
+- ロールは権限のグループです。

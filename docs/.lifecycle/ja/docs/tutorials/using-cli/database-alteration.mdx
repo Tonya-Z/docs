@@ -1,0 +1,108 @@
+```yaml
+---
+sidebar_position: 3
+---
+
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+# データベースの変更
+
+新機能を開発したり、既存の機能をリファクタリングする際には、データベースのスキーマを変更することが避けられない場合があります。
+
+ユーザーとしては、以下の作業を通常行う必要があります。
+
+- 二つ以上のバージョン間の違いをダブルチェックする
+- データベースを安全かつ後方互換性を保った方法で変更する
+- 失敗への準備をする、例えばロールバックスクリプトを用意する
+- 実行中のLogtoインスタンスを新しいバージョンに段階的に置き換える
+
+**私たちも開発者です。リスクのあるが必須のこれらの作業をするのは不満ですよね。** だからこそ、なぜ私たちのように間違いのない人間、たとえばCLIにそれらを任せないのですか？
+
+これからは、アップグレードプロセスは次の通りです。
+
+- データベースにアクセスできる場所から `logto db alt deploy` を実行する
+- 実行中のLogtoインスタンスを新しいバージョンに段階的に置き換える
+
+さあ、始めましょう！
+
+## デプロイするバージョンを決定する
+
+Logto CLIがグローバルにインストールされている場合、**最新バージョンにアップグレードすることを強くお勧めします**。 その後、次のコマンドを実行してください。
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto db alteration deploy
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli db alteration deploy
+```
+
+  </TabItem>
+
+</Tabs>
+
+データベースが最新である場合、以下のメッセージが表示されます。
+
+```bash
+[info] Found 0 alteration to deploy
+```
+
+未展開の変更がある場合、CLIは望ましいバージョンを選択するように求めます。
+
+```bash
+? Choose the alteration target version (Use arrow keys)
+> 1.0.0-beta.11
+  1.0.0-beta.10
+```
+
+理論上、デプロイするバージョンはLogtoインスタンスのバージョンと一致するはずです。その間、ターゲットバージョンを指定してコマンドを使用することができます。
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto db alteration deploy 1.0.0-beta.11
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli db alteration deploy 1.0.0-beta.11
+```
+
+  </TabItem>
+
+</Tabs>
+
+TTYパイプラインで変更を行いたい場合は、`--db-url` を使用してデータベースURLを渡すことを覚えておくと役立ちます。クラスタ内で変更ジョブを設定するには、[🚀 デプロイメント](/docs/recipes/deployment)を参照してください。
+
+:::info
+それぞれの変更スクリプトでは、Logto CLIはトランザクション内で全体のスクリプトを実行します。したがって、展開が失敗した場合、問題が修正された後に同じコマンドで簡単に続行することができます。
+:::
+
+## 変更を元に戻す
+
+私たちの変更スクリプトには、変更を元に戻す `down`スクリプトも含まれています。現時点では便利なCLIコマンドがありませんが、近日中に利用可能になります。
+
+すべての変更スクリプトは、[このディレクトリ](https://github.com/logto-io/logto/tree/master/packages/schemas/alterations) で見つけることができます。
+
+## 貢献者向け
+
+データベースの変更が必要な機能を開発する場合、データベースのスキーマを更新する代わりに、次の形式のスクリプトを提供する必要があります。
+
+```bash
+next-[timestamp]-what-to-do.ts
+```
+
+参照のために、[このディレクトリ](https://github.com/logto-io/logto/tree/master/packages/schemas/alterations)を確認してください。
+```

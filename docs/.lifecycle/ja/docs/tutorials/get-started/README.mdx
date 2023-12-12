@@ -1,0 +1,250 @@
+```javascript
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+import gitpodRunning from './assets/gitpod-running.png';
+
+# ⚡ はじめに
+
+オープンソース版とクラウドプレビュー版の管理コンソールへのアクセスには微妙な違いがあります。
+
+## クラウドプレビュー
+
+クラウドプレビューはLogtoのSoftware-as-a-Service (SaaS) バージョンです。オープンソース版よりもアカウント作成オプションや基本的なクラウド操作が豊富に提供されています。
+
+ユーザーはGoogle、GitHub、メールにパスワード、または認証コードを使用してサインアップおよびサインインすることができます。クラウドに入ると、プラットフォーム内でリソースやプロフィール情報を管理できます。
+
+サインアップ時に、Logtoがお客様のニーズと好みを把握し、体験をカスタマイズするためのオンボーディングフローを進むことになります。数ステップしか必要ありませんが、オンボーディングフローは素早く始めて認証や認可を成功させるのに非常に役立つことができます。
+
+![はじめに](./assets/create-account.png)
+
+## オープンソース
+
+### Logtoを起動する
+
+<p>
+  <a href="https://gitpod.io/#https://github.com/logto-io/demo" target="_blank" rel="noopener">
+    こちらをクリック
+  </a>
+  &nbsp;
+  <span>
+    LogtoのためのGitPodワークスペースを開始するには、しばらく待ってから次のようなメッセージが表示されます:
+  </span>
+</p>
+<p>
+  <img src={gitpodRunning} alt="Gitpod is running" width="720px" />
+</p>
+
+Logtoはデフォルトで、コアサービスにはポート `3001`、対話型の管理コンソールにはポート `3002` を使用します。
+
+Logtoの旅を続けるには、`https://3002-...`で始まるリンクをCtrl (またはCmd)を押しながらクリックしてください。お楽しみください！
+
+### ローカル
+
+<Tabs>
+
+<TabItem value="docker-compose" label="Docker Compose">
+
+Docker Compose CLI は通常、[Docker Desktop](https://www.docker.com/products/docker-desktop) とともに提供されます。
+
+:::警告
+本番でのdocker composeコマンドの使用はお控えください！`docker-compose.yml` にLogtoアプリと組み込まれた組み込みPostgresデータベースがあるため、コマンドを再度実行するたびに新しいデータベースインスタンスが作成され、以前に永続化されたデータは失われます。
+:::
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/logto-io/logto/HEAD/docker-compose.yml | docker compose -p logto -f - up
+```
+
+正常にコンポーズが完了したら、次のようなメッセージが表示されます:
+
+</TabItem>
+
+<TabItem value="docker" label="Docker">
+
+<h3>ステップ1</h3>
+
+[PostgreSQL](https://www.postgresql.org/)@^14.0 インスタンスを準備し、Logto用にデータベースをシードするために<a href="/docs/tutorials/using-cli/">Logto CLI</a>を使用します:
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto db seed
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli db seed
+```
+
+  </TabItem>
+
+</Tabs>
+
+<h3>ステップ2</h3>
+
+イメージをプルします:
+
+```bash
+# ghcr
+docker pull ghcr.io/logto-io/logto:latest
+# DockerHub
+docker pull svhd/logto:latest
+```
+
+<h3>ステップ3</h3>
+
+コンテナのポートをLogtoコアおよび管理アプリにマップし、例えば `3001:3001` および `3002:3002` と設定し、以下の環境変数をコンテナに設定します:
+
+```yml
+TRUST_PROXY_HEADER: 1 # HTTPSプロキシ（例: Nginx）がLogtoの前にある場合は1に設定します
+ENDPOINT: https://<your-logto-domain> # カスタムドメインを使用している場合は置き換えてください
+ADMIN_ENDPOINT: https://<your-logto-admin-domain> # カスタムドメインを使用している場合は置き換えてください
+DB_URL: postgres://username:password@your_postgres_url:port/db_name # Postgres DSNを置き換えてください
+```
+
+上記のすべての環境変数を使用してコンテナを実行します:
+
+```bash
+docker run \
+  --name logto \
+  -p 3001:3001 \
+  -p 3002:3002 \
+  -e TRUST_PROXY_HEADER=1 \
+  -e ENDPOINT=https://<your-logto-domain> \
+  -e ADMIN_ENDPOINT=https://<your-logto-admin-domain> \
+  -e DB_URL=postgres://username:password@your_postgres_url:port/db_name \
+  ghcr.io/logto-io/logto:latest
+```
+
+:::ヒント
+
+- Docker Hubを使用している場合は、`ghcr.io/logto-io/logto:latest`の代わりに`svhd/logto:latest`を使用してください。
+- `DB_URL` に`host.docker.internal`または`172.17.0.1`を使用してホストIPを参照してください。
+
+:::
+
+最後に、次のようなメッセージが表示されます:
+
+</TabItem>
+
+<TabItem value="npm" label="npm-init">
+
+**前提条件**
+
+- [Node.js](https://nodejs.org/) `^18.12.0`
+- [PostgreSQL](https://postgresql.org/) `^14.0`
+
+より高いバージョンも通常動作しますが、保証されるものではありません。
+
+Logtoのために専用の新しい空のデータベースを使用することをお勧めしますが、これは必須ではありません。
+
+**ダウンロードと開始**
+
+ターミナルで次を実行してください:
+
+```bash
+npm init @logto@latest
+```
+
+初期化プロセスを完了し、Logtoを起動すると、次のようなメッセージが表示されます:
+
+</TabItem>
+
+</Tabs>
+
+```text
+コアアプリは http://localhost:3001 で実行されています
+コアアプリは https://your-domain-url で実行されています
+管理アプリは http://localhost:3002 で実行されています
+管理アプリは https://your-admin-domain-url で実行されています
+```
+
+<a target="_blank" href="http://localhost:3002/" rel="noopener">http://localhost:3002/</a> に移動して、Logtoの旅を続けてください。お楽しみください！
+
+<details>
+
+<summary>構成 (オプション)</summary>
+
+Logtoは環境変数と`.env`ファイルをサポートした構成に使用します。詳細な使用方法と全ての変数のリストについては、[構成](../../references/core/configuration.md)を参照してください。
+
+</details>
+
+詳細なコントロールやLogtoへのプログラムアクセスが必要な場合は、[コアサービス](../../references/core/README.mdx)をご覧ください。
+
+### クイックトラブルシューティング
+
+<details>
+
+<summary>
+  ブラウザが管理コンソールを読み込めません（エラーが表示される <code>Crypto.subtleは利用できません…</code>）
+</summary>
+
+管理コンソールは[Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)を使用しており、[セキュアコンテキスト](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts)、つまりHTTPSまたは`localhost`でのHTTPが必要です。
+
+IPアドレスやカスタムドメインでHTTPを使用している場合、ブラウザは管理コンソールを読み込むことができません。
+
+</details>
+
+<details>
+
+<summary>
+  カスタムドメインを使用していますが、ブラウザが管理コンソールを読み込むことができません（エラーが表示される <code>"code": "oidc.invalid_redirect_uri"</code>）
+</summary>
+
+`localhost`の代わりにカスタムドメインを使用している場合は、LogtoのURLに`ENDPOINT`環境変数を設定する必要があります。これはOIDCでのリダイレクトURIの厳格な要件によるものです。詳細については[構成](../../references/core/configuration.md#general)を参照してください。
+
+</details>
+
+<details>
+
+<summary>
+  Logtoの前にHTTPSプロキシ（例: Nginx）を使用していますが、サインインに失敗しました（エラーが表示される <code>TypeError: Failed to fetch</code>）
+</summary>
+
+- まず、ノード環境変数`TRUST_PROXY_HEADER`を`true`に設定していることを確認してください。詳細については[構成](../../references/core/configuration.md#using-a-https-proxy)を参照してください。
+- また、プロキシの構成で`X-Forwarded-Proto`ヘッダーを`https`に設定する必要があります。詳細については[Trusting TLS offloading proxies](https://github.com/panva/node-oidc-provider/blob/main/docs/README.md#trusting-tls-offloading-proxies)を参照してください。
+
+</details>
+
+<details>
+
+<summary>CORSの問題に遭遇しています。</summary>
+
+- `ADMIN_ENDPOINT` が指定されていない場合、LogtoでのCross-Origin Resource Sharing（CORS）が`localhost:[admin-port]`を許可します。
+- `ADMIN_ENDPOINT` が指定されている場合、`ADMIN_ENDPOINT`の起源からのリクエストのみが許可されます。
+
+</details>
+
+<details>
+
+<summary>
+  これは何ですか？ <code>Error: Invalid id token</code>
+</summary>
+
+トークンに問題がない場合、ほとんどの場合、これはサーバー時間とクライアント時間の不一致によるものです。サーバーとクライアントの両方の時間を同期させ、もう一度お試しください。
+
+</details>
+
+### アカウントを作成
+```
+```
+Once you have successfully hosted Logto on your server, click on "Create Account" on the welcome page. Keep in mind that the open-source version of Logto only allows for one account creation during the initial launch and does not support multiple accounts. The account creation process is limited to username and password combinations.
+
+## 初めての方へ
+
+アカウントを作成した後、自動的に「はじめに」タブにリダイレクトされ、Logtoの機能の概要が簡単に説明されます。提供されるオンボーディングアイテムには、すぐに利用可能なアクション可能なリソースだけでなく、事前の準備を必要とするものも含まれています。
+
+当社の文書チュートリアルは、「はじめに」タブで見るものと同じ順序で従います。全体的に、これらのアイテムは探索し、Logtoを最大限に活用するのに役立つように意図されています。
+
+オープンソースユーザー、個々の開発者、またはエンタープライズユーザーかに応じて、異なる推奨事項とガイド付きコンテンツが表示される場合があります。これらの推奨事項は、セグメンテーション間の機能の差別化ではなく、Logtoをナビゲートし、最大限に活用するのに役立つ提案であることに注目することが重要です。
+
+当社の目標の1つは、オープンソース版またはクラウド版を使用しているかを問わず、機能がすべての人に利用可能であることを確認することです。
+
+それでは、それぞれのアイテムを確認し、Logtoで何ができるかを探ってみましょう！
+
+![はじめに](./assets/get-started.png)
+```

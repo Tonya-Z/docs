@@ -1,0 +1,72 @@
+---
+sidebar_position: 1
+---
+
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+# Logtoのインストール
+
+## インタラクティブ
+
+下記のコマンドを実行して、インタラクティブなインストールをターミナルで行います:
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto init
+```
+
+  </TabItem>
+  <TabItem value="npm" label="npm">
+
+```bash
+npm init @logto@latest
+```
+
+  </TabItem>
+
+</Tabs>
+
+## オプションとサイレントインストール
+
+また、以下のオプションを追加して一部の質問をスキップすることもできます:
+
+```bash
+# これらのオプションはすべて任意です
+--db-url      LogtoデータベースへのPostgres URL
+-p, --path    Logtoインスタンスへのパス、存在しないパスである必要があります
+--ss          Logtoデータベースのシーディングをスキップ
+--oc          インストール後に公式コネクタを追加する
+```
+
+完全なヘルプ情報については、`logto init --help`を実行してください。
+
+以下はサイレントインストールの例です（例: CIでの実行）:
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto init -p ./logto --db-url postgresql://your-postgres-dsn:5432/logto --oc
+```
+
+  </TabItem>
+  <TabItem value="npm" label="npm">
+
+```bash
+npx @logto/cli init -p ./logto --db-url postgresql://your-postgres-dsn:5432/logto --oc
+```
+
+  </TabItem>
+
+</Tabs>
+
+以下の順序で次のことを行います:
+
+1. Logtoを`./logto`にダウンロードして展開
+2. URL `postgresql://your-postgres-dsn:5432/logto`でデータベースの初期化とシーディングを試行
+3. `./logto/packages/core/connectors`にLogtoの公式コネクタを追加

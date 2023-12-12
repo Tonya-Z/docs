@@ -1,0 +1,251 @@
+```markdown
+---
+sidebar_label: Android
+---
+
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+import redirectUriFigure from './assets/android-redirect-uri.png';
+import JavaSetupCode from './fragments/_android_sdk_setup_code_java.md';
+import KotlinSetupCode from './fragments/_android_sdk_setup_code_kotlin.md';
+import AppNote from './fragments/_app-note.mdx';
+import ApplyAuthorizationToken from './fragments/_apply_authorization_token.md';
+import ConfigureRedirectUri from './fragments/_configure-redirect-uri.mdx';
+import FetchUserInformation from './fragments/_fetch-user-information.mdx';
+import FurtherReadings from './fragments/_further-readings.md';
+import GetAuthorizationToken from './fragments/_get_authorization_token.md';
+import SignInNote from './fragments/_sign-in-note.mdx';
+
+# Android: Integrate Logto Android SDK
+
+<AppNote type="Native App" />
+
+## Logto SDKを依存関係として追加する
+
+:::note
+Logto Andorid SDKの最小サポートAndroid APIレベルはレベル24です。
+:::
+
+Gradleプロジェクトのビルドファイルに`mavenCentral()`リポジトリを追加します:
+
+```kotlin
+repositories {
+    mavenCentral()
+}
+```
+
+Logto Android SDKを依存関係に追加します:
+
+<Tabs>
+
+<TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+dependencies {
+    implementation("io.logto.sdk:android:1.0.0-alpha.0")
+}
+```
+
+</TabItem>
+
+<TabItem value="groovy" label="Groovy">
+
+```groovy
+dependencies {
+    implementation 'io.logto.sdk:android:1.0.0-alpha.0'
+}
+```
+
+</TabItem>
+
+</Tabs>
+
+## LogtoClientを初期化する
+
+:::note
+LogtoClientを作成する前に、Applicationオブジェクトが初期化されていることを確認してください。
+:::
+
+<Tabs>
+
+<TabItem value="kotlin" label="Kotlin">
+
+<KotlinSetupCode />
+
+</TabItem>
+
+<TabItem value="java" label="Java">
+
+<JavaSetupCode />
+
+</TabItem>
+
+</Tabs>
+
+## サインイン
+
+### リダイレクトURIを構成する
+
+Andoridでは、リダイレクトURIは以下のパターンに従います: `$(LOGTO_REDIRECT_SCHEME)://$(YOUR_APP_PACKAGE)/callback`。
+
+:::note
+`LOGTO_REDIRECT_SCHEME`はリバースドメイン形式のカスタムスキームである必要があります。  
+`YOUR_APP_PACKAGE`はアプリのパッケージ名です。
+:::
+
+`io.logto.android`をカスタムの`LOGTO_REDIRECT_SCHEME`と見なし、`io.logto.sample`をアプリのパッケージ名とすると、リダイレクトURIは`io.logto.android://io.logto.sample/callback`となります。
+
+これで、管理コンソールでリダイレクトURIを構成できます（例: `io.logto.android://io.logto.sample/callback`）。
+
+<ConfigureRedirectUri
+  figureSrc={redirectUriFigure}
+  redirectUri="io.logto.android://io.logto.sample/callback"
+/>
+
+### サインイン
+
+<SignInNote calling=".signIn(context, redirectUri, completion)" />
+
+<Tabs>
+
+<TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+logtoClient.signIn(this, "<your-redirect-uri>") { logtoException: LogtoException? ->
+    // `logtoException`がnullであれば、ユーザーは正常にサインインされています。
+}
+```
+
+</TabItem>
+
+<TabItem value="java" label="Java">
+
+```java
+logtoClient.signIn(this, "<your-redirect-uri>", logtoException -> {
+    // `logtoException`がnullであれば、ユーザーは正常にサインインされています。
+});
+```
+
+</TabItem>
+
+</Tabs>
+
+サインインに成功すると、`logtoClient.isAuthenticated`は`true`になります。
+
+## サインアウト
+
+`.signOut(completion)`を呼び出すと、エラーが発生した場合でも常にローカルの認証情報がクリアされます。
+
+<Tabs>
+
+<TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+logtoClient.signOut { logtoException: LogtoException? ->
+    // `logtoException`がnullであっても、ローカルの認証情報はクリアされます。
+}
+```
+
+</TabItem>
+
+<TabItem value="java" label="Java">
+
+```java
+logtoClient.signOut(logtoException -> {
+    // `logtoException`がnullであっても、ローカルの認証情報はクリアされます。
+});
+```
+
+</TabItem>
+
+</Tabs>
+
+## ユーザー情報の取得
+
+<FetchUserInformation apiCodeFragment="logtoClient.fetchUserInfo()" />
+
+## バックエンドAPI認証
+
+<GetAuthorizationToken />
+
+Logto SDKの設定にAPIリソース指示子を追加します。
+
+<Tabs>
+<TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// 上記にリストされている必要なLogtoConfigを使用して
+
+override fun onCreate(savedInstanceState: Bundle?) {
+  val logtoConfig = LogtoConfig(
+    endpoint = "<your-logto-endpoint>",
+    appId = "<your-app-id>",
+    scopes = null,
+     // アクセスを許可するすべてのAPIリソースをリストアップ
+    resources = listOf("<your-resource-indicators>"),
+    usingPersistStorage = true,
+    prompt = PromptValue.CONSENT,
+  )
+
+  logtoClient = LogtoClient(logtoConfig, application)
+}
+
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+// 上記にリストされている必要なLogtoConfigを使用して
+
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    // アクセスを許可するすべてのAPIリソースをリストアップ
+    ArrayList<String> resources = new ArrayList<String>(Arrays.asList("<your-resource-indicators>"));
+
+    LogtoConfig logtoConfig = new LogtoConfig(
+        "<your-logto-endpoint>",  // 例: http://localhost:3001
+        "<your-app-id>",
+        null,
+        resources,
+        true,
+        PromptValue.CONSENT
+    );
+
+    logtoClient = new LogtoClient(logtoConfig, getApplication());
+}
+```
+
+</TabItem>
+</Tabs>
+
+APIリクエストを行う前に、Logtoから認証トークンを要求してください。
+
+<Tabs>
+<TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+logtoClient.getAccessToken("<resource-indicator>", { logtoException, accessToken ->
+    // カスタムロジック
+})
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+logtoClient.getAccessToken("<resource-indicator>", (logtoException, accessToken) -> {
+    // カスタムロジック
+});
+```
+
+</TabItem>
+
+</Tabs>
+
+<ApplyAuthorizationToken />
+
+## さらなる読み物
+
+<FurtherReadings />

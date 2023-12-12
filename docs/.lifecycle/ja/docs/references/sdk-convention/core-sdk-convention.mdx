@@ -1,0 +1,35 @@
+---
+sidebar_position: 1.2
+---
+
+import CoreFunctions from './fragments/_core_functions.md';
+import CoreTypes from './fragments/_core_types.md';
+import CoreUtilityFunctions from './fragments/_core_utility_functions.md';
+
+# コア
+
+## 基本規約
+
+- コアはプラットフォームに依存しない関数のみを含むべきです。
+- コアは `{$language}` と名付けられ、リポジトリのルートディレクトリ下にあるべきです。例: `logto/js/js`, `logto/kotlin/kotlin`。
+- コアパッケージはLogtoスコープ下で `{$language}` と命名されるべきです。例: `@logto/js`, `io.logto.sdk:kotlin`。
+
+## 基本要件
+
+どのコアSDKも以下を含むべきです:
+
+- タイプ
+- ユーティリティ関数
+- コア関数
+
+### タイプ
+
+<CoreTypes />
+
+### ユーティリティ関数
+
+<CoreUtilityFunctions />
+
+### コア関数
+
+<CoreFunctions />
