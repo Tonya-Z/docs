@@ -1,0 +1,25 @@
+次のURLを使用して、Logto SDKをSwift Package Managerの依存関係として追加してください。
+
+```bash
+https://github.com/logto-io/swift.git
+```
+
+Xcode 11以降、追加のツールなしに[Swiftパッケージを直接インポート](https://developer.apple.com/documentation/swift_packages/adding_package_dependencies_to_your_app)できます。
+
+現時点では、**Carthage**と**CocoaPods**は一部の技術的な問題によりサポートされていません。
+
+<details>
+
+<summary>Carthage</summary>
+
+Carthageはビルドするために`xcodeproj`ファイルが必要ですが、`swift package generate-xcodeproj`は、ネイティブソーシャルプラグインにバイナリターゲットを使用しているため失敗します。後で回避策を見つけようとしています。
+
+</details>
+
+<details>
+
+<summary>CocoaPods</summary>
+
+CocoaPodsはローカル依存関係とモノレポをサポートしておらず、そのためこのリポジトリのための`.podspec`を作成することが困難です。
+
+</details>

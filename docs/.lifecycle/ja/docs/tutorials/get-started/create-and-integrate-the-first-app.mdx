@@ -1,0 +1,79 @@
+---
+sidebar_position: 2
+---
+
+import Columns from '@components/Columns';
+
+import ApplicationTypesIntro from '../../fragments/_application_types_intro.mdx';
+
+# 最初のアプリケーションを作成して統合する
+
+まず、[はじめに](./get-started)タブに移動し、右側にある「作成」ボタンを見つけます。このボタンをクリックすると、アプリケーションタブにリダイレクトされます。そこから、「アプリケーションの作成」ボタンをクリックして続行します。
+
+## アプリケーションタイプを選択する
+
+開いたモーダルで、統合したいアプリケーションのタイプを選択します。
+
+<ApplicationTypesIntro />
+
+![Create Application modal](./assets/create-application-modal.png)
+
+利用可能なアプリケーションタイプに対して異なるチュートリアルを用意しており、適切なタイプを選択すると役立ちます。
+
+![Create Application guide](./assets/create-application-guide.png)
+
+## アプリケーション名を入力する
+
+アプリケーション名を入力し、「アプリケーションの作成」をクリックします。例：「書店」。
+
+## Logtoを統合する
+
+タダ！Logtoで最初のアプリケーションを作成しました。詳細な統合ガイドが含まれた祝辞のページが表示されます。ガイドに従って、アプリケーションでのエクスペリエンスを確認します。
+
+:::note
+誤って管理コンソールのガイドをスキップした場合、以下の一覧からガイドを選択するか、アプリケーション詳細ページで「ヘルプガイドを確認」をクリックすることもできます。
+:::
+
+### 統合ガイド
+
+<Columns
+  columns={[
+    {
+      title: 'ネイティブアプリ',
+      items: [
+        { key: 'iOS', link: '/docs/recipes/integrate-logto/ios' },
+        { key: 'Android', link: '/docs/recipes/integrate-logto/android' },
+      ],
+    },
+    {
+      title: 'シングルページアプリ',
+      items: [
+        { key: 'Vanilla JS', link: '/docs/recipes/integrate-logto/vanilla-js' },
+        { key: 'React', link: '/docs/recipes/integrate-logto/react' },
+        { key: 'Vue', link: '/docs/recipes/integrate-logto/vue' },
+      ],
+    },
+    {
+      title: '伝統的なWebアプリ',
+      items: [
+        { key: '伝統的なWeb', link: '/docs/recipes/integrate-logto/traditional' },
+        { key: 'Next.js', link: '/docs/recipes/integrate-logto/next-js' },
+        { key: 'Express', link: '/docs/recipes/integrate-logto/express' },
+        { key: 'Go', link: '/docs/recipes/integrate-logto/go' },
+      ],
+    },
+    {
+      title: '機械間',
+      items: [
+        {
+          key: '機械間',
+          link: '/docs/recipes/integrate-logto/machine-to-machine',
+        },
+      ],
+    },
+  ]}
+/>
+
+## 次は何ですか
+
+サインインエクスペリエンスにさらなるカスタマイズを加え、さらに一歩進んでみましょう。

@@ -1,0 +1,165 @@
+```markdown
+import BasicTokenRequirements from './fragments/_basic-token-requirements.mdx';
+import BearerAuth from './fragments/_bearer-auth.md';
+
+# 🧱 コアサービス
+
+## はじめに
+
+_コアサービス_は、重要な Logto の業務のためのモノリスサービスです。ソースコードは [`/packages/core`](https://github.com/logto-io/logto/tree/master/packages/core) にあります。
+
+:::note
+_コアサービス_ と _SDKコア_ は異なる概念です。違いについては [SDK コンベンション](../sdk-convention/README.md) をご覧ください。
+:::
+
+簡単にするために、コアサービスを 4 つの主要なモジュールに分割しています:
+
+<table>
+  <thead>
+    <tr>
+      <td>名前</td>
+      <td>説明</td>
+      <td>マウントパス</td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>OIDC プロバイダー</td>
+      <td>
+        <a
+          href="https://openid.net/specs/openid-connect-core-1_0.html"
+          target="_blank"
+          rel="noopener"
+        >
+          OpenID プロバイダー
+        </a>
+        です。
+      </td>
+      <td>
+        <code>/oidc</code>
+      </td>
+    </tr>
+    <tr>
+      <td>管理 API</td>
+      <td>Logto を管理するための API です。管理者ロールが必要です。</td>
+      <td>
+        <code>/api</code>
+      </td>
+    </tr>
+    <tr>
+      <td>フロントエンドプロキシ</td>
+      <td>フロントエンドプロジェクト用の HTTP プロキシまたは静的ファイルサービングです。</td>
+      <td>
+        詳細については<a href="#frontend-proxies">フロントエンドプロキシ
+        </a>をご覧ください。
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+OIDC プロバイダーAPIを含むバックエンドAPIは `core` パッケージに組み込まれており、フロントエンドプロキシは、Logto monorepo の対応する兄弟パッケージに依存しています。
+
+## OIDC プロバイダー
+
+Logto は、[OpenID Connect](https://openid.net/connect/) の素晴らしい認定を受けた実装 [`node-oidc-provider`](https://github.com/panva/node-oidc-provider) を内部で使用しています。プロバイダーは `/oidc` にマウントされており、[`packages/core/src/oidc`](https://github.com/logto-io/logto/tree/master/packages/core/src/oidc) で相対的な設定とファイルをチェックできます。
+
+:::info
+OIDC API を直接呼び出す場合は、ヘッダーに `Content-Type: application/x-www-form-urlencoded` を設定することを忘れないでください。
+:::
+
+### 有効な OpenID 機能
+
+- [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html)
+- [OpenID Connect Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html)
+- [OpenID Connect RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html)
+- [OAuth 2.0 Token Revocation](https://www.rfc-editor.org/rfc/rfc7009.html)
+- [OAuth 2.0 Resource Indicators](https://www.rfc-editor.org/rfc/rfc8707.html)
+
+## 管理 API
+
+_管理 API_ は、Logto データを管理および更新するための API セットです。これにアクセスできるのは、 `admin` ロールを持つユーザーのみです。
+
+これは `/api` にマウントされています。ブラウザで詳細を見るには [API リファレンス](/api) に移動するか、Swagger の結果を取得するには `GET /api/swagger.json` を使用してください。
+
+API をプログラムを通じてアクセスする場合は、[管理 API とのやりとり](../../recipes/interact-with-management-api/README.md)を参照してください。
+
+### 認証
+
+管理コンソールはこれらの API に非常に依存していますが、手動で呼び出すこともできます。
+
+<BasicTokenRequirements>
+  その <code>scope</code> には <code>&quot;all&quot;</code> が含まれています。
+</BasicTokenRequirements>
+
+<BearerAuth />
+  
+## ユーザー API
+
+私たちは、`/oidc/me` にマウントされた標準の OpenID Connect [ユーザー情報エンドポイント](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo) を提供しています。
+
+### 認証
+
+<BasicTokenRequirements />
+
+<BearerAuth />
+
+### リフレッシュトークン再利用間隔について
+
+リフレッシュトークンには回転遅延（3秒）があることに気づくかもしれません。この遅延は、指定された時間枠内で回転するリフレッシュトークンを複数回交換する際の並行性の問題を避けるのに役立ちます。
+
+リフレッシュトークンが消費された場合、leeway ウィンドウ（秒単位）では、それは有効なものとして考慮され続けます。
+
+これは、共有メモリがない分散型アプリや Next.js のようなサーバーレスアプリに役立ちます。
+
+## フロントエンドプロキシ
+
+フロントエンドプロキシは、環境に関連した方法でフロントエンドプロジェクトを提供するミドルウェア機能です。
+
+- 開発時は HTTP リクエストをフロントエンドの開発サーバーにプロキシします。
+- 本番環境では、静的フロントエンドファイルを直接提供します。
+
+Logto には 3 つのフロントエンドプロキシがあります:
+
+<table>
+  <thead>
+    <tr>
+      <td>名前</td>
+      <td>フロントパッケージ</td>
+      <td>マウントパス</td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>管理コンソールプロキシ</td>
+      <td>
+        <code>/packages/console</code>
+      </td>
+      <td>
+        <code>/console</code>
+      </td>
+    </tr>
+    <tr>
+      <td>デモアプリプロキシ</td>
+      <td>
+        <code>/packages/demo-app</code>
+      </td>
+      <td>
+        <code>/demo-app</code>
+      </td>
+    </tr>
+    <tr>
+      <td>UI（サインインエクスペリエンス）プロキシ</td>
+      <td>
+        <code>/packages/ui</code>
+      </td>
+      <td>
+        <code>/</code>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+:::note
+UIプロキシはルートパスを使用していることに気付くかもしれません。他のプロキシとは異なり、UIプロキシはフォールバックプロキシであり、他のプロキシが一致しない場合にのみ効果があります。
+:::
+```

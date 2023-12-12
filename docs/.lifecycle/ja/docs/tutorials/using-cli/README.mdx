@@ -1,0 +1,80 @@
+```javascript
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+# 🖥 Logto CLIの使用
+
+## はじめに
+
+Logto CLIはインストール、保守、更新を手作業で面倒な技術的なことをせずに行う便利な方法を提供します。
+
+:::note
+現在、バイナリを提供していないため、環境には Node.js `^18.12.0` が必要です。
+:::
+
+### CLIをグローバルにインストール
+
+`logto`コマンドをグローバルに使用するために、好みのパッケージマネージャー経由でインストールします：
+
+<Tabs>
+
+  <TabItem value="npm" label="npm">
+
+```bash
+npm i @logto/cli -g
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="Yarn">
+
+```bash
+yarn global add @logto/cli
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add -g @logto/cli
+```
+
+  </TabItem>
+
+</Tabs>
+
+どのコマンドでも`--help`を追加してヘルプ情報を表示させることができます：
+
+```bash
+logto --help
+logto db seed --help
+```
+
+### ローカルCLI
+
+v1.0.0-beta.11以降のすべてのLogtoリリースにはCLIのビルトインバージョンが付属しています。すでに`~/logto`にLogtoインスタンスがある場合は、以下のコマンドを実行できます：
+
+```bash
+cd ~/logto
+npm run cli # ローカルCLIを呼び出す
+```
+
+オプションを付けて実行したい場合、Logto CLI のオプションの前に `--` を付ける必要があります。例えば：
+
+```bash
+npm run cli db seed -- --db-url postgresql://your-database-url
+```
+
+### `npx`でCLIを使用
+
+Logto CLIを使用する別の方法は`npx`です。これはパッケージをインストールせずに実行できます。
+
+```bash
+npx @logto/cli
+```
+
+これは一回きりの呼び出しに役立ちます。例えば：
+
+```bash
+npx @logto/cli db seed --db-url postgresql://your-database-url
+```
+```

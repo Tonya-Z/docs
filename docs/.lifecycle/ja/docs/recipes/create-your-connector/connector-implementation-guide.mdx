@@ -1,0 +1,289 @@
+---
+sidebar_label：コネクタの実装ガイド
+sidebar_position: 2
+---
+
+# コネクタの実装ガイド
+
+接続子のファイル構造を見た後に、コネクタの実装と開発の主要なアイディアについて話し合いましょう。
+
+ほとんど同じアイディアで自分のコネクタを構築できるように、ソーシャルコネクタとパスワードレスコネクタのための簡単な例を見ていきます。
+
+この部分では、特定のパラメーター（例: `config`）の詳細には深入りしていません。新しいコネクタを実装する開発者は、サードパーティーサービスベンダーが提供するドキュメントを参照し、そのドキュメントはパラメーターについて詳細に説明しているはずです。
+
+## ソーシャルコネクタの構築
+
+GitHubコネクタを例に挙げてみましょう。
+
+ほとんどのソーシャルコネクタの認可フローは[OAuth認可コードフロー](https://openid.net/specs/openid-connect-basic-1_0.html)に従っています。
+
+:::note
+ほとんどの_ソーシャルコネクタ_は、エンドユーザーの認証によるユーザープロファイルの取得を、以下の2段階の手順で行います（すべての手順が成功したと仮定して）：
+
+1. 認証リクエストを開始し、ユーザーの認証を取得します。
+2. コネクタベンダーが付与した`authCode`を使用して`accessToken`を取得します。
+3. `accessToken`を使用して、公開アクセス可能なユーザープロファイルをリクエストします。
+:::
+
+このフローを実行するには、次の3つのメソッドが必要です：
+
+### getAuthorizationUri
+
+`getAuthorizationUri`はリダイレクトURLを生成し、エンドユーザーを認証が必要なページに誘導できるようにします。
+
+このインターフェースは[`@logto/connector-kit`](https://github.com/logto-io/logto/blob/master/packages/toolkit/connector-kit/src/types.ts)にて`GetAuthorizationUri`として定義されています。
+
+以下のパラメーターが必要です：
+
+- `authorizationEndpoint`はGitHubのOAuthドキュメントサイトで見つけることができます。これはエンドユーザーが認証に行くべきページです。
+- `config`にはGitHubのシナリオにおける`clientId`および`clientSecret`が含まれています。
+- `state`はCSRFを証明するためのランダムな文字列です。
+- `redirectUri`はエンドユーザーの認証が成功した後の着地ページです。
+
+```typescript
+const getAuthorizationUri = async ({ state, redirectUri }) => {
+  const queryParameters = new URLSearchParams({
+    client_id: config.clientId, // `config`にはGitHubアプリケーションの資格情報が含まれています
+    redirect_uri: redirectUri,
+    state,
+  });
+
+  return `${authorizationEndpoint}?${queryParameters.toString()}`;
+};
+```
+
+### getAccessToken
+
+`getAccessToken`は、エンドユーザーが認証に成功した後に発行された認可コードでアクセストークンを取得します。
+
+前述の`getAuthorizationUri`メソッドで言及した`config`に加えて、次の情報が必要になります：
+
+- リダイレクト着地ページに持参された認可`code`
+- 認可コードでアクセストークンを取得するための`accessTokenEndpoint`
+
+```typescript
+const getAccessToken = async (config: GithubConfig, code: string) => {
+  const { clientId: client_id, clientSecret: client_secret } = config;
+
+  const httpResponse = await got.post({
+    url: accessTokenEndpoint,
+    json: {
+      client_id,
+      client_secret,
+      code,
+    },
+    timeout: defaultTimeout,
+  });
+
+  const result = accessTokenResponseGuard.safeParse(qs.parse(httpResponse.body));
+
+  if (!result.success) {
+    throw new ConnectorError(ConnectorErrorCodes.InvalidResponse, result.error);
+  }
+
+  const { access_token: accessToken } = result.data;
+
+  assert(accessToken, new ConnectorError(ConnectorErrorCodes.SocialAuthCodeInvalid));
+
+  return { accessToken };
+};
+```
+
+### getUserInfo
+
+`getUserInfo`は前の手順で取得したアクセストークンでユーザー情報を取得します。
+
+このインターフェースは[`@logto/connector-kit`](https://github.com/logto-io/logto/blob/master/packages/toolkit/connector-kit/src/types.ts)にて`GetUserInfo`として定義されています。
+
+サインイン目的で、`getSession`関数を使用して必要な情報を取得できます。
+
+`userInfoEndpoint`はユーザー情報を取得するために使用されるエンドポイントです。
+
+ユーザー情報エンドポイントでアクセス可能な特定のユーザー情報および対応するスコープを取得できるかどうかを確認するために、公式文書を参照してください。
+
+コネクタのアイデンティティプロバイダー（この場合はGitHub）によって割り当てられた`id`が必要です。その他の情報はオプションです。ユーザープロフィールから`email`または`phone`を取得できる場合は、それらが「検証済み」であることを確認してください。また、戻り値のキーを[Logtoユーザープロファイル](../../references/users/README.md#basic-data)のフィールド名と整合させる必要があります。
+
+```typescript
+const getUserInfo = async (
+  data: { code: string; config: GithubConfig },
+  getSession: GetSession,
+  { set: SetStorageValue, get: GetStorageValue }
+) => {
+  const { code, config } = data;
+  const { accessToken } = await getAccessToken(config, code);
+
+  try {
+    const httpResponse = await got.get(userInfoEndpoint, {
+      headers: {
+        authorization: `token ${accessToken}`,
+      },
+      timeout: defaultTimeout,
+    });
+
+    const result = userInfoResponseGuard.safeParse(parseJson(httpResponse.body));
+
+    if (!result.success) {
+      throw new ConnectorError(ConnectorErrorCodes.InvalidResponse, result.error);
+    }
+
+    const { id, avatar_url: avatar, email, name } = result.data;
+
+    return {
+      id: String(id),
+      avatar: conditional(avatar),
+      email: conditional(email),
+      name: conditional(name),
+    };
+  } catch (error: unknown) {
+    if (error instanceof HTTPError) {
+      const { statusCode, body: rawBody } = error.response;
+
+      if (statusCode === 401) {
+        throw new ConnectorError(ConnectorErrorCodes.SocialAccessTokenInvalid);
+      }
+
+      throw new ConnectorError(ConnectorErrorCodes.General, JSON.stringify(rawBody));
+    }
+
+    throw error;
+  }
+};
+
+コンプリートな実装は[こちら](https://github.com/logto-io/connectors/blob/master/packages/connector-github/src/index.ts)で確認できます。
+
+設定可能なパラメーターの詳細については、GitHubコネクタのREADMEまたはGitHub公式ドキュメントを参照してください。
+
+:::note
+ここで話し合ってきた例は、ログトのGitHubコネクタで使用されているOAuthプロトコルの認可コードグラントタイプに基づいています。ただし、別の認可タイプであるインプリシット認可タイプもユーザープロファイルを取得するために使用でき、実際には認証応答でアクセストークンを直接提供します。この利便性にもかかわらず、セキュリティが強化されているため通常は認可コードグラントタイプがインプリシットタイプよりも推奨されています。
+
+また、OIDCやその他のオープンプロトコルに基づいてコネクタを構築することもできますが、それは使用ケースと接続したいソーシャルベンダーの互換性に依存します。
+:::
+
+## パスワードレスコネクタの構築
+
+パスワードレスコネクタの構築プロセスを把握するために、アリババ直接メールコネクタの実装を見ていきましょう。
+
+パスワードレスコネクタはエンドユーザーのメールや電話にランダムなコードを送信するために使用されます。結果として、`sendMessage`メソッドが必要です。
+
+### sendMessage
+
+メッセージを送信するためには、`config`と`endpoint`が適切に設定されている必要があります。
+
+- `endpoint`はAPI呼び出しが接続するエンドポイントです。
+- `config`には`templates`（異なるユーザーフローでパスコードを送信するためのコンテンツテンプレート）、`clientId`、`clientSecret`（APIリクエストへのアクセスに使用するもの）が含まれています。
+
+```typescript
+const sendMessage = async (data, inputConfig) => {
+  const { to, type, payload } = data;
+  const config = inputConfig ?? (await getConfig(defaultMetadata.id));
+  validateConfig<AliyunDmConfig>(config, aliyunDmConfigGuard);
+  const { accessKeyId, accessKeySecret, accountName, fromAlias, templates } = config;
+  const template = templates.find((template) => template.usageType === type);
+
+  assert(
+    template,
+    new ConnectorError(
+      ConnectorErrorCodes.TemplateNotFound,
+      `Cannot find template for type: ${type}`
+    )
+  );
+
+  const parameters = {
+    AccessKeyId: accessKeyId,
+    AccountName: accountName,
+    ReplyToAddress: 'false',
+    AddressType: '1',
+    ToAddress: to,
+    FromAlias: fromAlias,
+    Subject: template.subject,
+    HtmlBody:
+      typeof payload.code === 'string'
+        ? template.content.replace(/{{code}}/g, payload.code)
+        : template.content,
+  };
+
+  try {
+    const httpResponse = await request(
+      endpoint,
+      { Action: 'SingleSendMail', ...staticConfigs, ...parameters },
+      accessKeySecret
+    );
+
+    const result = sendEmailResponseGuard.safeParse(parseJson(httpResponse.body));
+
+    if (!result.success) {
+      throw new ConnectorError(ConnectorErrorCodes.InvalidResponse, result.error);
+    }
+
+    return result.data;
+  } catch (error: unknown) {
+    if (error instanceof HTTPError) {
+      const {
+        response: { body: rawBody },
+      } = error;
+      assert(typeof rawBody === 'string', new ConnectorError(ConnectorErrorCodes.InvalidResponse));
+      errorHandler(rawBody);
+    }
+
+    throw error;
+  }
+};
+
+const request = async (
+  url: string,
+  parameters: PublicParameters & Record<string, string>,
+  accessKeySecret: string
+) => {
+  const finalParameters: Record<string, string> = {
+    ...parameters,
+    SignatureNonce: String(Math.random()),
+    Timestamp: new Date().toISOString(),
+  };
+  const signature = getSignature(finalParameters, accessKeySecret, 'POST');
+
+  const payload = new URLSearchParams();
+```
+
+```javascript
+for (const [key, value] of Object.entries(finalParameters)) {
+  payload.append(key, value);
+}
+payload.append('Signature', signature);
+
+return got.post({
+  url,
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded',
+  },
+  form: payload,
+});
+};
+```
+
+完全な実装は[こちら](https://github.com/logto-io/connectors/blob/master/packages/connector-aliyun-dm/src/index.ts)で見つけることができます。
+
+構成可能なパラメータの詳細については、AliyunダイレクトメールコネクタのREADMEまたはAliyunダイレクトメールの公式ドキュメントを参照してください。
+
+## さらに詳しい情報は？
+
+コネクタメソッドの定義を確認し、コネクタインターフェース設計の全体像を把握するには、[`@logto/connector-kit`](https://github.com/logto-io/logto/tree/master/packages/toolkit/connector-kit)を参照してください。また、"[Connectors - ConnectorMetadata](../../references/connectors/#connectors-local-storage-connectormetadata)"で_ConnectorMetadata_の参照を見つけることができ、"[Connector file structure](./connector-file-structure.mdx)"は実装方法を理解するのに役立ちます。
+
+- すべてのコネクタにおいて、コネクタの設定用の _Zod_ スキーマは必須です。これは、`config`をDBに保存する前や`config`情報が必要なAPIを呼び出す前に型チェックを行うため非常に重要です。
+- すべての _SMSコネクタ_ および _Emailコネクタ_ には、サービスプロバイダのメッセージ送信APIを呼び出すための`sendMessage`メソッドが必要です。開発者はまた、管理コンソールでコネクタを設定する際に未保存の設定でテストメッセージを送信するためにこのメソッドを再利用することができます。
+- _Socialコネクタ_ の場合、認証URL生成器`getAuthorizationUri`とユーザープロファイル取得者`getUserInfo`が必要です(`getAccessToken`は`getUserInfo`でオプションとして扱われます)。
+- すべてのコネクタのメソッドはAPI呼び出しを通して動作します。そのため、コネクタ開発者は文書をチェックし、失敗したAPI呼び出しの応答を処理する必要があります。
+
+## 独自のコネクタをインストールする
+
+独自のコネクタの構築を完了していることを前提とします。次の手順を実行して手動でインストールします：
+
+1. コネクタリポジトリの依存関係をルートパスのコネクタフォルダで`pnpm i`と入力してインストールします。
+2. `pnpm build`でコネクタをビルドします。
+3. 実装したコネクタフォルダを[`logto-io/logto`](https://github.com/logto-io/logto)の`/packages/core/connectors`ディレクトリにコピーします。
+4. `logto-io/logto`のルートディレクトリで`pnpm dev`を使ってLogtoインスタンスを再起動します。
+
+これで、コネクタが正常にインストールされたことを確認できます。
+
+自分のコネクタをテストして試すことができます。期待通りに動作するかどうか確認してください。
+
+すでにNPMまたはLogto公式コネクタに公開されているコネクタを追加したい場合は、[Logto CLIの使用 - コネクタの管理](../../tutorials/using-cli/manage-connectors#add-connectors)を参照してください。

@@ -1,0 +1,14 @@
+ユーザー情報の応答は、`LogtoClient`の初期化時に使用されるスコープによって異なります。以下の表は、ユーザー情報とスコープの関係を示しています:
+
+| フィールド名           | タイプ       | 必須スコープ    | 備考                                     |
+| ---------------------- | ---------- | -------------- | ---------------------------------------- |
+| sub                    | `string`   | `openid`       | `openid`スコープはデフォルトで追加されます。  |
+| name                   | `string`   | `profile`      | `profile`スコープはデフォルトで追加されます。 |
+| username               | `string`   | `profile`      | `profile`スコープはデフォルトで追加されます。 |
+| picture                | `string`   | `profile`      | `profile`スコープはデフォルトで追加されます。 |
+| email                  | `string`   | `email`        |                                          |
+| email_verified         | `boolean`  | `email`        |                                          |
+| phone_number           | `string`   | `phone`        |                                          |
+| phone_number_verified  | `boolean`  | `phone`        |                                          |
+| custom_data            | `object`   | `custom_data`  |                                          |
+| identities             | `object`   | `identities`   |                                          |

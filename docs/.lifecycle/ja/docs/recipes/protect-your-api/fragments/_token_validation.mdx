@@ -1,0 +1,163 @@
+```javascript
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+### トークンの構文解析と検証
+
+エンコードされた[JWS](https://datatracker.ietf.org/doc/html/rfc7515)トークンは3つのパートで構成されています:
+
+- JOSEヘッダー：コードの種類とエンコーディングアルゴリズムを宣言します
+- JWSペイロード： トークンのすべてのクレームを含みます
+- JWSシグネチャ： JWKで署名されたシグネチャ
+
+Logto JWSペイロードの標準スキーマ： (クレームは、OIDC構成に基づいて異なる場合があります)
+
+| key       | description                |
+| --------- | -------------------------- |
+| jti       | ユニークなJWT ID            |
+| sub       | サブジェクト（通常はユーザーID）  |
+| iat       | トークンの発行時刻           |
+| exp       | トークンの有効期限時刻        |
+| client_id | アプリケーションID            |
+| iss       | トークン発行者の識別子        |
+| aud       | トークンの対象              |
+
+:::note
+開発用にJWTを視覚的に検査する場合は、[jwt.io](https://jwt.io/)にアクセスして、受け取ったトークンをデコードして確認できます。 本番環境からのトークンには注意が必要です。サードパーティがサービスを提供しており、トークンが危険にさらされる可能性があります。
+:::
+
+Bearerトークンは、次の条件を満たす場合にのみ受け入れる必要があります：
+
+- トークンのJWS形式が検証されていること（詳細は[JWT](https://datatracker.ietf.org/doc/html/rfc7519#section-7.2)を参照）
+- トークンの発行者が `https://<your-logto-domain>/oidc`（Logtoサーバーによって発行）
+- トークンの対象が現在のAPIインジケータであること（対象が制限されている）
+- トークンが有効期間内であること
+
+さまざまなオープンソースライブラリやミドルウェアを使用して、トークンを簡単に検証することができます。 それらの多くは、JWTトークンを検証および解析するためのさまざまなカスタマイズ可能な構成で単一のメソッドで実装されています。
+
+<Tabs>
+
+<TabItem value="js" label="NodeJs">
+
+[jose](https://github.com/panva/jose)を使用して、トークンの署名、有効期限状態、および必要なクレームを検証します。
+
+```js
+import { jwtVerify } from 'jose';
+
+const { payload } = await jwtVerify(
+  token, // リクエストヘッダーから抽出された生のBearerトークン
+  publicKey, // Logtoサーバーから取得したjwks
+  {
+    // トークンの予想される発行者（Logtoサーバーによって発行される必要があります）
+    issuer: 'https://<your-logto-domain>/oidc',
+    // 予想されるトークンの対象、現在のAPIのリソースインジケータである必要があります
+    audience: '<your request listener>',
+  }
+);
+```
+
+</TabItem>
+
+<TabItem value="java" label="Java">
+
+[io.jsonwebtoken](https://javadoc.io/doc/io.jsonwebtoken/jjwt/latest/index.html)パッケージの使用
+
+パッケージの依存関係を追加:
+
+```xml
+<dependency>
+  <groupId>io.jsonwebtoken</groupId>
+  <artifactId>jjwt</artifactId>
+  <version>0.9.1</version>
+</dependency>
+```
+
+JwtTokenUtil:
+
+```java
+import java.util.Date;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+
+public class JwtTokenUtil {
+
+    private final String secret;
+
+    public JwtTokenUtil(String secret) {
+        this.secret = secret;
+    }
+
+    public Boolean validateToken(String token, String listener, String logtoPath) {
+        final Claims claims = getAllClaimsFromToken(token);
+        final String audience = claims.getAudience();
+        final String issuer = claims.getIssuer();
+
+        return (audience.equals(listener) && issuer.equals(logtoPath) && !isTokenExpired(claims));
+    }
+
+    public Claims getAllClaimsFromToken(String token) {
+        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
+    }
+
+    public Date getExpirationDateFromToken(String token) {
+        return getAllClaimsFromToken(token).getExpiration();
+    }
+
+    public String getUserIdFromToken(String token) {
+        return getAllClaimsFromToken(token).getSubject();
+    }
+
+    public String getAudienceFromToken(String token) {
+        return getAllClaimsFromToken(token).getAudience();
+    }
+
+    public String getIssuerFromToken(String token) {
+        return getAllClaimsFromToken(token).getIssuer();
+    }
+
+    private static Boolean isTokenExpired(Claims claims) {
+        return claims.getExpiration().before(new Date());
+    }
+}
+
+```
+
+:::info
+パッケージの選択は使用しているフレームワークによって異なります。 例えば、Spring Frameworkを使用している場合は、[org.springframework.security.oauth2.jwt](https://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/oauth2/jwt/package-summary.html)を確認してください。
+:::
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+authlibの[JWTBearerTokenValidator](https://github.com/lepture/authlib/blob/169c7dcfc47478c8d55553cc95fb0f5578162b77/authlib/oauth2/rfc7523/validator.py)を利用します
+
+```python
+from authlib.oauth2.rfc7523 import JWTBearerTokenValidator
+from authlib.jose.rfc7517.jwk import JsonWebKey
+
+class MyLogtoBearerTokenValidator(JWTBearerTokenValidator):
+    """
+    jwks: Logtoのjwksエンドポイント "https://<your-logto-domain>/oidc/jwks" からjwksを取得して、応答を渡す必要があります
+    """
+    def __init__(self, jwks, issuer="https://<your-logto-domain>/oidc", audience):
+        public_key = JsonWebKey.import_key_set(jwks)
+        super(MyLogtoBearerTokenValidator, self).__init__(public_key, issuer)
+        self.claims_options = {
+           'exp': {'essential': True},
+           'iss': {'essential': True, 'value': issuer}
+           'aud': {'essential': True, "value": audience} # トークンの対象をリクエストURLで検証する場合はオプションです
+        }
+
+    """
+    オプション: 各エンドポイントレベルでトークン対象をより厳密に保護する場合:
+    """
+    def validate_token(self, token, scopes, request):
+        super(MyLogtoBearerTokenValidator, self).validate_token(token, scopes, request)
+        if token.get('aud') != str(request.url):
+            raise InvalidTokenError()
+
+```
+
+</TabItem>
+</Tabs>

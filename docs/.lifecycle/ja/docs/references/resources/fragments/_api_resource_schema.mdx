@@ -1,0 +1,46 @@
+<table>
+  <thead>
+    <tr>
+      <td>
+        <strong>プロパティ名</strong>
+      </td>
+      <td>
+        <strong>プロパティの説明</strong>
+      </td>
+      <td>
+        <strong>必須</strong>
+      </td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>API 名</td>
+      <td>API リソースを識別するのに役立つユーザーフレンドリーな名前。</td>
+      <td>true</td>
+    </tr>
+    <tr>
+      <td>API 識別子</td>
+      <td>
+        上記の制限がリストされたユニークな<a href="https://www.rfc-editor.org/rfc/rfc8707.html">API リソースインジケーター</a>値。
+        <br />
+        Logto はこれを使用して要求された API リソースを識別し、それに応じて承認トークンを付与します。
+      </td>
+      <td>true</td>
+    </tr>
+    <tr>
+      <td>
+        トークンの有効期限 <i>（秒単位）</i>
+      </td>
+      <td>
+        <strong>access_token</strong> の有効期限。デフォルトの有効期限値は <strong>3600</strong> です。
+      </td>
+      <td>false</td>
+    </tr>
+  </tbody>
+</table>
+
+:::caution
+有効期限切れの <strong>access_token</strong> を持つリクエストは制限されるべきです。
+これは API を悪用されたトークンから保護するために実装されています。
+設定する値が大きいほど、発行された <strong>access_token</strong> の生存期間が長くなり、API はより脆弱になります。
+:::

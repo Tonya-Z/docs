@@ -1,0 +1,194 @@
+```jp
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+# RBACでAPIリソースを保護する
+
+:::note
+このページでは、要件に基づいて役割と権限を構成していることを前提としています。これをまだ行っていない場合は、[🔐 RBAC（ロールベースのアクセス制御）](./README.mdx)を最初に参照してください。
+:::
+
+## サーバー
+
+着信リクエストが適切なアクセス権を持っていることを確認するために、サーバーサイドでアクセストークンを検証する必要があります。詳細な検証プロセスは[⚔️ APIを保護](/docs/recipes/protect-your-api/#validate-the-api-requests-authorization-token)で実証されています。
+
+つまり、基本的なJWTとJWSの検証に加えて、次の点に注意する必要があります。
+
+- トークンに正しい発行者（`iss`）があること
+- トークンに正しい受信者（つまり、リソース指示子：`aud`）があること
+- トークンに必要なスコープ（つまり、権限：`scope`）があること
+
+なお、`scope`はすべての付与されたスコープをスペースで区切って含む文字列です。通常、検証に使用するライブラリがこれを処理します。
+
+:::caution
+現在、認証フローで有効なリソース指示子をリクエストするための制限はありません。したがって、RBACを実装する際に`scope`（権限）の検証は重要です。そうしないと、リソース指示子の意味が取るに足らなくなる可能性があります。
+:::
+
+:::info
+アクセストークンには`role`が含まれていないことに気づくかもしれませんが、これは設計上のものです。なぜなら、APIリソースの権限（`scope`）がアクセス制御モデルの最終的な代表であり、私たちが関心を持つべきものだからです。
+:::
+
+## クライアント
+
+### 仮定
+
+以下のような権限を持つ2つのリソースがあるとします。
+
+- APIリソース `https://api-1.store.io`
+  - 権限 `read:order`
+  - 権限 `write:order`
+- APIリソース `https://api-2.store.io`
+  - 権限 `read:order`
+
+特定のアクセス権を得るためには、クライアントはLogtoから適切なアクセストークンを取得し、リクエストヘッダーでBearer Tokenとして使用する必要があります。
+
+### クライアントSDKの構成
+
+このチュートリアルでは、サンプル言語としてTypeScriptを使用し、慣例はすべてのLogtoクライアントSDKに適用されます。
+
+アプリケーションにクライアントSDKを統合する際は、`LogtoClient`の構成に`resources`と`scopes`（権限）の両方を含めるようにしてください。
+
+たとえば、APIリソース`https://api-1.store.io`にアクセスして`read:order`と`write:order`権限を取得するには、次のような構成にする必要があります。
+
+```ts
+const config: LogtoConfig = {
+  // ...other configs
+  resources: ['https://api-1.store.io'],
+  scopes: ['read:order', 'write:order'], // つまり、権限
+};
+```
+
+:::tip
+Logto SDKでは、`scope`という用語がOAuth 2.0プロトコルに合わせて使用されています。ただし、管理コンソールでは、現実世界のシナリオをよりよく読み取り、理解できるように`permission`として参照されます。そのため、`scope`と`permission`は、コーディングを除いてすべてのケースで同一であり、交換可能です。
+:::
+
+### リソースのアクセストークンの取得
+
+ユーザーが正常にサインインした場合、`logtoClient.getAccessToken()`を使用して指定されたリソースに対するアクセストークンを取得できます。
+
+<Tabs>
+
+<TabItem value="ts" label="TypeScript">
+
+```ts
+const accessToken = await logtoClient.getAccessToken('https://api-1.store.io');
+```
+
+</TabItem>
+
+<TabItem value="swift" label="Swift">
+
+```swift
+let token = try await client.getAccessToken(for: "https://api-1.store.io")
+```
+
+</TabItem>
+
+<TabItem value="kotlin" label="Kotlin">
+
+```swift
+logtoClient.getAccessToken("https://api-1.store.io", { logtoException, accessToken ->
+    //...
+})
+```
+
+</TabItem>
+
+</Tabs>
+
+アクセストークンには、現在のユーザーに対して付与されたすべての権限（スコープ）が含まれます。付与されたスコープの定義は、以下の集合の共通部分です。
+
+- 初期のLogto構成の`scopes`内のサブセット。このサブセットは、`getAccessToken()`に渡されたリソース指示子に属するすべてのスコープを含みます。
+- ユーザーがRBAC構成に基づいて取得できるスコープ
+
+たとえば、初期のLogto構成では次のようになります。
+
+```ts
+const config: LogtoConfig = {
+  // ...other configs
+  resources: ['https://api-1.store.io'],
+  scopes: ['read:order', 'write:order', 'custom_data'],
+};
+```
+
+[仮定](#assumption)によると、`cusom_data`スコープはAPIリソース`https://api-1.store.io`で利用できません。 アクセストークンを取得する場合:
+
+```ts
+const accessToken = await logtoClient.getAccessToken('https://api-1.store.io');
+```
+
+ユーザーが`https://api-1.store.io`の`read:order`と`write:order`権限を持っている場合、返されるアクセストークンには次のようになります。
+
+```ts
+{
+  // ...other token claims
+  iss: '<your-logto-endpoint>/oidc', // 発行者
+  aud: 'https://api-1.store.io', // 受信者、つまり、リソース指示子
+  scope: 'read:order write:order'
+}
+```
+
+`getAccessToken()`に複数のリソース指示子を指定できますが、セキュリティの観点から、アクセストークンはリソースごとにしか受け付けないため、アクセストークンはリソース固有です。
+
+### リクエストでアクセストークンを使用
+
+`Authorization`フィールドにトークンをBearer形式（`Bearer YOUR_TOKEN`）で格納し、リクエスト`Authorization`ヘッダーに配置します。これで`https://api-1.store.io`はサーバーサイドからトークンを受け取り、検証できます。
+
+:::note
+Bearerトークンの統合フローは、利用するフレームワークやリクエスターによって異なる場合があります。リクエスト`Authorization`ヘッダーを適用するための方法を選択してください。
+:::
+
+### オプション: 複数のAPIリソースへのアクセス
+
+ビジネスやマイクロサービスの数が増えるにつれて、クライアントアプリケーションが複数のAPIリソースにアクセスする必要が生じることがあります。OAuth 2.0プロトコルでは`resources`と`scopes`の関連性を指定できないため、混乳してしまう点が戸惑いの原因となります。
+
+そこで、RFC 8707を再調査しました。 [セクション2.2](https://www.rfc-editor.org/rfc/rfc8707.html#section-2.2-3) で、結果は `resources`と`scopes`の[デカルト積（直積）](https://en.wikipedia.org/wiki/Cartesian_product)であると明らかになりました。
+
+> _... 実質上、トークンの要求されたアクセス権は、すべてのターゲットサービスのスコープのデカルト積です。 可能な限り、アクセストークンの発行時に、認可サーバーはスコープ値をダウンスコープすべきです..._
+
+<details>
+
+<summary>了解しました。それでいきましょう。</summary>
+
+結果が暗黙的になるため、デカルト積が最良の解決策であるかどうかは分かりません。
+
+ただし、[RFC 6749](https://www.rfc-editor.org/rfc/rfc6749)（OAuth 2.0認可フレームワーク）よりも8年後に公開された[RFC 8087](https://www.rfc-editor.org/rfc/rfc8707.html)であるため、理解できます。
+
+</details>
+
+したがって、[仮定](#assumption)での2つのリソースにまたがる`read:order`権限にアクセスするには、次のような構成が必要です。
+
+```ts
+const config: LogtoConfig = {
+  // ...other configs
+  resources: ['https://api-1.store.io', 'https://api-2.store.io'],
+  scopes: ['read:order'],
+};
+```
+
+認証フロー中、Logtoは次の2つの権限を検証しようとします。
+
+- APIリソース `https://api-1.store.io` の権限 `read:order`
+- APIリソース `https://api-2.store.io` の権限 `read:order`
+
+もしもAPIリソース`https://api-1.store.io`の`write:order`権限をリクエストする場合はどうすればよいですか？ 単に構成を更新します。
+
+```ts
+const config: LogtoConfig = {
+  // ...other configs
+  resources: ['https://api-1.store.io', 'https://api-2.store.io'],
+  scopes: ['read:order', 'write:order'],
+};
+```
+
+デカルト積の定義によると、認証フロー中、Logtoは次の4つの権限を検証しようとします。
+
+- APIリソース `https://api-1.store.io` の権限 `read:order`
+- APIリソース `https://api-1.store.io` の権限 `write:order`
+- APIリソース `https://api-2.store.io` の権限 `read:order`
+```
+- APIリソース `https://api-2.store.io` の権限 `write:order` 
+
+ただし、APIリソース `https://api-2.store.io` には `write:order` 権限が存在しません。Logtoはこの権限を無視し、APIリソース `https://api-2.store.io` の認証結果に反映されます。
+
+また、`logtoClient.getAccessToken()` を呼び出す際にリソース指定子として `https://api-2.store.io` を指定することも可能です。ユーザーが `https://api-2.store.io` のフルアクセス権を持っていても、返されるアクセストークンの `scope` クレームには `read:order` のみが表示されます。

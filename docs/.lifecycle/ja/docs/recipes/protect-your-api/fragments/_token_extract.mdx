@@ -1,0 +1,94 @@
+```javascript
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+### ヘッダーからBearerトークンの存在を検証して抽出する
+
+リクエストには `Bearer <access_token>` の形式で `Authorization` ヘッダーが含まれている必要があります。 リクエストヘッダーからBearerトークンを抽出します:
+
+<Tabs>
+
+<TabItem value="js" label="NodeJs">
+
+```js
+import { IncomingHttpHeaders } from 'http';
+
+const extractBearerTokenFromHeaders = ({ authorization }: IncomingHttpHeaders) => {
+  if (!authorization) {
+    throw new Error({ code: 'auth.authorization_header_missing', status: 401 });
+  }
+
+  if (!authorization.startsWith('Bearer')) {
+    throw new Error({ code: 'auth.authorization_token_type_not_supported', status: 401 });
+  }
+
+  return authorization.slice(bearerTokenIdentifier.length + 1);
+};
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+@Component
+public class JwtRequestFilter extends OncePerRequestFilter {
+  @Override
+  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+      final String requestTokenHeader = request.getHeader("Authorization");
+      String jwtToken = null;
+
+      if (requestTokenHeader != null && requestTokenHeader.startsWith("Bearer ")) {
+        jwtToken = requestTokenHeader.substring(7);
+      } else {
+        // 有効なトークンが見つかりません
+      }
+
+      // ...
+  }
+}
+
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+Python開発者向けに、[authlib](https://github.com/lepture/authlib)という便利なライブラリがあり、Logtoによって発行されたBearerトークンを簡単に検証できます。
+
+プライベートAPIのためのリソースプロテクターを作成します:
+
+:::note
+Flask開発者の場合は、[flask_oauth リソースプロテクター](https://docs.authlib.org/en/latest/flask/2/resource-server.html)を参照してください。
+Django開発者の場合は、[django リソースプロテクター](https://docs.authlib.org/en/latest/django/2/resource-server.html)を確認してください。
+:::
+
+```python
+from flask import Flask
+
+# Django開発者向け:
+from authlib.integrations.django_oauth2 import ResourceProtector
+
+# Flask開発者向け
+from authlib.integrations.flask_oauth2 import ResourceProtector
+
+# このバリデータのカスタマイズについては、次のバリデーションセクションで取り上げます
+from validator import MyLogtoBearerTokenValidator
+
+app = Flask(__name__)
+
+require_auth = ResourceProtector()
+require_oauth.register_token_validator(MyLogtoBearerTokenValidator())
+
+@app.route("/api/foo")
+@require_auth()
+def foo() # ここにあなたの保護されたAPI
+```
+
+</TabItem>
+</Tabs>

@@ -1,0 +1,92 @@
+---
+sidebar_label: Vanilla JS
+---
+
+import redirectUriFigure from '../assets/web-redirect-uri.png';
+import AppNote from '../fragments/_app-note.mdx';
+import ApplyAuthorizationToken from '../fragments/_apply_authorization_token.md';
+import ConfigureRedirectUri from '../fragments/_configure-redirect-uri.mdx';
+import FetchUserInformation from '../fragments/_fetch-user-information.mdx';
+import FurtherReadings from '../fragments/_further-readings.md';
+import GetAuthorizationToken from '../fragments/_get_authorization_token.md';
+import SignInFlowSummary from '../fragments/_web-sign-in-flow-summary.mdx';
+import SignOutNote from '../fragments/_web-sign-out-note.md';
+import AddSdk from './_add_sdk.mdx';
+import HandleRedirect from './_handle_redirect.mdx';
+import ImplementSignIn from './_implement_sign_in.mdx';
+import InitClient from './_init_client.mdx';
+
+# Vanilla JS: Integrate `@logto/browser`
+
+:::tip
+ブラウザSDKは[フレームワークに依存しない](https://stackoverflow.com/questions/64725017/what-does-it-mean-by-framework-agnostic)ため、それを適合させるラッパーを書くことで、任意のフロントエンドフレームワークで使用できます。 それが`@logto/react`および`@logto/vue`が行ったことです。
+:::
+
+<AppNote type="Single Page App" />
+
+## Logto SDKを依存関係として追加
+
+<AddSdk />
+
+## LogtoClientを初期化
+
+<InitClient />
+
+## サインイン
+
+<SignInFlowSummary />
+
+### リダイレクトURIを設定
+
+<ConfigureRedirectUri figureSrc={redirectUriFigure} redirectUri="http://localhost:3000/callback" />
+
+### サインインボタンを実装
+
+<ImplementSignIn />
+
+### リダイレクトを処理
+
+<HandleRedirect />
+
+## サインアウト
+
+<SignOutNote />
+
+### サインアウトボタンを実装
+
+```html
+<button onclick="logtoClient.signOut('http://localhost:3000')">サインアウト</button>
+```
+
+## ユーザ情報を取得
+
+<FetchUserInformation apiCodeFragment="logtoClient.fetchUserInfo()" />
+
+## バックエンドAPI認証
+
+<GetAuthorizationToken />
+
+Logto SDK構成にAPIリソース指標を追加します：
+
+```js
+import LogtoClient from '@logto/browser';
+
+const logtoClient = new LogtoClient({
+  endpoint: '<your-logto-endpoint>', // 例: http://localhost:3001
+  appId: '<your-application-id>',
+  resources: ['<your-api-resource>'],
+});
+```
+
+APIリクエストを行う前に、Logtoから認証トークンを取得してください：
+
+```js
+const token = await logtoClient.getAccessToken('<your-target-api-resource>');
+// カスタムロジック
+```
+
+<ApplyAuthorizationToken />
+
+## さらなる読み物
+
+<FurtherReadings />

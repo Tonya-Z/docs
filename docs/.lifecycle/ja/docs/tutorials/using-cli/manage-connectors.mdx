@@ -1,0 +1,151 @@
+```markdown
+---
+sidebar_position: 2
+---
+
+import Admonition from '@theme/Admonition'; 
+import TabItem from '@theme/TabItem'; 
+import Tabs from '@theme/Tabs'; 
+
+import ConnectorsIntro from '../get-started/fragments/_connectors-intro.md';
+
+# コネクタの管理
+
+<ConnectorsIntro />
+
+:::note
+各コマンドについて、`--path /your/path/to/logto` (エイリアス `-p`) を追加して Logto インスタンスのパスを指定できます。
+:::
+
+## 既存のコネクタの一覧
+
+以下のコマンドを使用して、Logto インスタンスに追加された既存のコネクタの一覧を表示します:
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto connector list
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli connector list
+```
+
+  </TabItem>
+
+</Tabs>
+
+サンプル出力:
+
+```bash
+OFFICIAL
+  @logto/connector-alipay-native
+  @logto/connector-aliyun-dm
+  @logto/connector-aliyun-sms
+  @logto/connector-apple
+  @logto/connector-azuread
+
+3RD-PARTY
+  connector-some-third-party
+```
+
+## コネクタの追加
+
+### 公式コネクタ
+
+公式のコネクタは、[こちらの @logto/connectors](https://github.com/logto-io/connectors/tree/master/packages) に一覧されています。ただし、テスト用に `connector-mock-` で始まる名前のコネクタは除きます。
+
+<Admonition type="tip" icon="🤠" title="協力者を募集中!">
+
+全てのコネクタはデフォルトで [Tier 1 Bounty Hunter issue](https://github.com/logto-io/logto/issues/1861) です。コネクタに興味がある場合は、関連する GitHub イシューへのコメントまたは作成に関してご自由に行ってください。
+
+</Admonition>
+
+公式の Docker イメージを使用しているか、初期化中に公式のコネクタを追加した場合は、再度追加する必要はありません。そうでない場合は、以下のコマンドを使用して全ての公式のコネクタを追加してください:
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto connector add --official
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli connector add --official
+```
+
+  </TabItem>
+
+</Tabs>
+
+### サードパーティコネクタ
+
+サードパーティのコネクタは、[@logto/connectors](https://github.com/logto-io/connectors/tree/master/packages) にはない Logto 用のコネクタです。
+
+追加するコネクタは有効な NPM パッケージでなければならず、パッケージ名は `connector-` または `@some-org/connector-` で始まらなければなりません。例:
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto connector add service-a connector-service-b @org/service-c
+# 以下と同じです
+logto connector add connector-service-a connector-service-b @org/connector-service-c
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli connector add service-a connector-service-b @org/service-c
+# 以下と同じです
+npx @logto/cli connector add connector-service-a connector-service-b @org/connector-service-c
+```
+
+  </TabItem>
+
+</Tabs>
+
+:::danger
+コネクタは実行可能なコードです！もしサードパーティのコネクタを使用しようとしている場合は、潜在的なセキュリティ問題を避けるために、非常に注意してコンパイルされたコード（NPM からダウンロードされたコンテンツ）を検査してください。
+:::
+
+:::info 注意
+変更を反映させるためには、Logto インスタンスを再起動することをお忘れなく。
+:::
+
+## コネクタの削除
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto connector remove connector-service-a @org/connector-service-b
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli connector remove connector-service-a @org/connector-service-b
+```
+
+  </TabItem>
+
+</Tabs>
+
+:::info 注意
+変更を反映させるためには、Logto インスタンスを再起動することをお忘れなく。
+:::
+```

@@ -1,0 +1,27 @@
+```
+import redirectUriFigure from '../assets/ios-redirect-uri.png';
+import ConfigureRedirectUri from '../fragments/_configure-redirect-uri.mdx';
+import SignInNote from '../fragments/_sign-in-note.mdx';
+
+### リダイレクトURIを設定
+
+<ConfigureRedirectUri figureSrc={redirectUriFigure} redirectUri="io.logto://callback" />
+
+:::info
+iOS SDKのリダイレクトURIは内部使用のみです。コネクタが要求するまで[カスタムURLスキーム](https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app)を追加する_必要はありません_。
+:::
+
+### ブラウザでサインイン
+
+<SignInNote calling=".signInWithBrowser(redirectUri:)" />
+
+Xcodeに戻り、以下のコードを使用してサインインを実装します：
+
+```swift
+do {
+  try await client.signInWithBrowser(redirectUri: "io.logto://callback")
+  print(client.isAuthenticated) // true
+} catch let error as LogtoClientErrors.SignIn {
+  // サインイン中にエラーが発生しました
+}
+```

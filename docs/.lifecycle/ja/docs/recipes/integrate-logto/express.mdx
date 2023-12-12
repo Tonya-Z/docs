@@ -1,0 +1,201 @@
+---
+sidebar_label: Express
+---
+
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+import redirectUriFigure from './assets/next-redirect-uri.png';
+import AppNote from './fragments/_app-note.mdx';
+import ConfigureRedirectUri from './fragments/_configure-redirect-uri.mdx';
+import FurtherReadings from './fragments/_further-readings.md';
+import GetAppSecret from './fragments/_get-app-secret.mdx';
+import UserInformationClaims from './fragments/_user-information-claims.mdx';
+import AssumingUrl from './fragments/_web-assuming-url.md';
+import SignInFlowSummary from './fragments/_web-sign-in-flow-summary.mdx';
+
+# Express: `@logto/express`の統合
+
+<AppNote type="Traditional Web" />
+
+## 依存関係の追加
+
+<Tabs>
+
+  <TabItem value="npm" label="npm">
+
+```bash
+npm i @logto/express cookie-parser express-session
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="Yarn">
+
+```bash
+yarn add @logto/express cookie-parser express-session
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @logto/express cookie-parser express-session
+```
+
+  </TabItem>
+
+</Tabs>
+
+## LogtoClientの初期化
+
+<AssumingUrl />
+
+<GetAppSecret />
+
+LogtoClientのインポートおよび初期化:
+
+```ts
+import { LogtoExpressConfig } from '@logto/express';
+
+const config: LogtoExpressConfig = {
+  appId: '<your-application-id>',
+  appSecret: '<your-application-secret>',
+  endpoint: '<your-logto-endpoint>', // 例: http://localhost:3001
+  baseUrl: '<your-express-app-base-url>', // 例: http://localhost:3000
+};
+```
+
+### 必要なミドルウェアの準備
+
+SDKでは、事前に[express-session](https://www.npmjs.com/package/express-session)の設定が必要です。
+
+```ts
+import cookieParser from 'cookie-parser';
+import session from 'express-session';
+
+app.use(cookieParser());
+app.use(session({ secret: 'random_session_key', cookie: { maxAge: 14 * 24 * 60 * 60 } }));
+```
+
+## サインイン
+
+<SignInFlowSummary />
+
+### サインイン用リダイレクトURIの構成
+
+<ConfigureRedirectUri
+  figureSrc={redirectUriFigure}
+  redirectUri="http://localhost:3000/logto/sign-in-callback"
+/>
+
+### Logtoルートの準備
+
+Logtoと接続するためのルートを準備します。
+
+IDE/エディタに戻り、まずAPIルートを実装するために次のコードを使用します:
+
+```ts
+import { handleAuthRoutes } from '@logto/express';
+
+app.use(handleAuthRoutes(config));
+```
+
+これにより、自動的に3つのルートが作成されます:
+
+1. `/logto/sign-in`: Logtoでサインインします。
+2. `/logto/sign-in-callback`: サインインのコールバックを処理します。
+3. `/logto/sign-out`: Logtoからサインアウトします。
+
+### サインインを実装する
+
+もう少しです! 今、サインインボタンを作成して、ユーザーがクリックするとサインインルートにリダイレクトするための次のコードを作成します。
+
+```ts
+app.get('/', (req, res) => {
+  res.setHeader('content-type', 'text/html');
+  res.end(`<div><a href="/logto/sign-in">サインイン</a></div>`);
+});
+```
+
+## ユーザープロフィールの取得
+
+ユーザープロフィールを取得するために、`withLogto`ミドルウェアを使用する必要があります:
+
+```ts
+import { withLogto } from '@logto/express';
+
+app.use(withLogto(config));
+```
+
+その後、ユーザープロフィールが`req`にアタッチされます。使用例:
+
+```ts
+app.get('/user', (req, res) => {
+  res.json(req.user);
+});
+```
+
+### ユーザー情報の取得
+
+ほとんどの場合、`req.user`内の`claims`を"ユーザー情報"として使用することをお勧めします。これはトークンが付与されると`claims`がキャッシュされるため、速いです。より正確なユーザー情報が必要な場合は、`config.fetchUserInfo`を`true`に設定して、SDKにOIDC [UserInfo Endpoint](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)からユーザー情報を取得するように指示します。
+
+```ts
+app.get('/user', withLogto({ ...config, fetchUserInfo: true }), (req, res) => {
+  res.json(req.user.userInfo);
+});
+```
+
+<UserInformationClaims />
+
+## ルートの保護
+
+前のステップで`withLogto`を設定した後、シンプルなミドルウェアを作成してルートを保護できます:
+
+```ts
+const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user.isAuthenticated) {
+    res.redirect('/logto/sign-in');
+  }
+
+  next();
+};
+```
+
+その後:
+
+```ts
+app.get('/protected', requireAuth, (req, res) => {
+  res.end('保護されたリソース');
+});
+```
+
+## アクセストークンの取得
+
+アクセストークンを取得したい場合は、`getAccessToken`を`true`に設定します:
+
+```ts
+app.get(
+  '/fetch-access-token',
+  withLogto({
+    ...config,
+    // リモートからアクセストークンを取得します。これによりレスポンス時間が遅れる場合があります。
+    // 必要に応じて"resource"を追加できます。
+    getAccessToken: true,
+  }),
+  (request, response) => {
+    // ここでアクセストークンを取得します
+    console.log(request.user.accessToken);
+    response.json(request.user);
+  }
+);
+```
+
+## サインアウト
+
+`/logto/sign-out`を呼び出すと、メモリおよびクッキー内のすべてのLogtoデータが消去されます。
+
+サインアウト後、ユーザーをウェブサイトにリダイレクトするのがよいでしょう。Admin ConsoleのPost Sign-out URIsに`http://localhost:3000`を追加しましょう(リダイレクトURIの下に表示されます)。
+
+## さらなる読み物
+
+<FurtherReadings />

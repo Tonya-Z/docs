@@ -1,0 +1,23 @@
+```tsx
+import SignInNote from '../fragments/_sign-in-note.mdx';
+
+認証フローを簡単に管理するための二つのフック `useHandleSignInCallback()` と `useLogto()` を提供しています。
+
+<SignInNote calling=".signIn()" />
+
+IDE/エディタに戻り、以下のコードを使用してサインインボタンを実装します：
+
+```tsx
+import { useLogto } from '@logto/react';
+
+const SignIn = () => {
+  const { signIn, isAuthenticated } = useLogto();
+
+  if (isAuthenticated) {
+    return <div>サインイン済み</div>;
+  }
+
+  return <button onClick={() => signIn('http://localhost:3000/callback')}>サインイン</button>;
+};
+```
+```

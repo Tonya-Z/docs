@@ -1,0 +1,14 @@
+```ts
+ほぼ最後です！最後のステップでは、Redirect URIとして`http://localhost:3000/callback`を使用し、それを適切に処理する必要があります。以下のコードを`/callback`ルートに挿入してください：
+
+```ts
+try {
+  await logtoClient.handleSignInCallback();
+  console.log(logtoClient.isAuthenticated); // true
+} catch {
+  // エラーを処理する
+}
+```
+
+これでサインインフローをテストできます。
+```

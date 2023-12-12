@@ -1,0 +1,106 @@
+---
+sidebar_position: 4
+---
+
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+# データベースの設定を管理する
+
+LogtoはOIDCやCookieキーなどのいくつかの技術的な設定を管理するのに役立ちます。これらを管理する前に、管理コンソールや管理APIを介してそれらを管理することができるように、CLIを使用することができます。
+
+## キーで設定を取得する
+
+使用法：
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto db config get <key> [keys...]
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli db config get <key> [keys...]
+```
+
+  </TabItem>
+
+</Tabs>
+
+たとえば、OIDCの秘密鍵を取得したいとします:
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto db config get oidc.privateKeys
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli db config get oidc.privateKeys
+```
+
+  </TabItem>
+
+</Tabs>
+
+出力は次のようになります:
+
+```bash
+oidc.privateKeys=["\n-----BEGIN PRIVATE KEY-----\nMIIJRAIBA..."]
+```
+
+利用可能なすべてのキーについては、`logto db config get --help`を実行するか、詳しい説明については[Configuration](/docs/references/core/configuration#database-configs)を参照してください。
+
+## キーで設定をセットする
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto db config set <key> [keys...]
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli db config set <key> [keys...]
+```
+
+  </TabItem>
+
+</Tabs>
+
+たとえば、OIDCのCookieキーを設定したいとします:
+
+<Tabs groupId="cmd">
+
+  <TabItem value="cli" label="CLI">
+
+```bash
+logto db config set oidc.cookieKeys "[\"key1\",\"key2\"]"
+```
+
+  </TabItem>
+  <TabItem value="npx" label="npx">
+
+```bash
+npx @logto/cli db config set oidc.cookieKeys "[\"key1\",\"key2\"]"
+```
+
+  </TabItem>
+
+</Tabs>
+
+通常、設定する値は有効なJSON文字列であり、事前に定義された型定義に従う必要があります。`logto db config set --help`を実行して、利用可能なすべてのキーを確認するか、詳細については[Configuration](/docs/references/core/configuration#database-configs)を参照してください。

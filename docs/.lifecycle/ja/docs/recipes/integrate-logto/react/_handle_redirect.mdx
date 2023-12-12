@@ -1,0 +1,26 @@
+```tsx
+// ほぼ完了です！前のステップで、リダイレクトURIとして `http://localhost:3000/callback` を使用しましたが、これを適切に処理する必要があります。
+
+まず、コールバックコンポーネントを作成しましょう。
+
+```tsx
+import { useHandleSignInCallback } from '@logto/react';
+
+const Callback = () => {
+  const { isLoading } = useHandleSignInCallback(() => {
+    // 終了時にルートパスに移動する
+  });
+
+  // 進行中の作業
+  if (isLoading) {
+    return <div>リダイレクト中...</div>;
+  }
+};
+```
+
+最後に、認証が必要ない `/callback` ルートを作成するために、以下のコードを挿入してください。
+
+```tsx
+// react-routerを想定している場合
+<Route path="/callback" element={<Callback />} />
+```

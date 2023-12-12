@@ -1,0 +1,10 @@
+アクセストークンは下記の基準を満たしている必要があります：
+
+<ul>
+  <li>有効なトークンである</li>
+  <li>あなたのLogtoインスタンスから発行されたものである</li>
+  <li>
+    その対象者（`aud`、つまりAPI識別子）が<code>https://api.logto.io</code>を指している。
+  </li>
+  {props.children && <li>{props.children}</li>}
+</ul>

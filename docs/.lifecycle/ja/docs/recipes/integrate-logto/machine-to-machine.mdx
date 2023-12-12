@@ -1,0 +1,103 @@
+---
+sidebar_label: マシン対マシン
+---
+
+import AppIdentifierSrc from './assets/api-identifier.png';
+import AppIdSecretSrc from './assets/app-id-secret.png';
+EnableAdminAccessSrc from './assets/enable-admin-access.png';
+import AppNote from './fragments/_app-note.mdx';
+
+# マシン対マシン：Logtoでの認証
+
+<AppNote type="Machine to Machine" />
+
+## イントロ
+
+マシン対マシン（M2M）は、リソースに直接通信する必要があるアプリがある場合に認証する一般的な手法です。例：Logtoにおいてユーザのカスタムデータを更新するAPIサービス、日次注文を引き出す統計サービスなど。
+
+通常、M2Mアプリにはユーザの対話が必要ありません、つまりUIを持ちません。
+
+:::info
+Logtoは現在、M2Mアプリをユーザを表すためにサポートしていません。アクセストークンの「sub」はアプリIDになります。
+:::
+
+## アクセストークンを取得
+
+### アプリIDとアプリシークレットを見つける
+
+アプリケーションの詳細ページで、アプリIDとアプリシークレットを見つけます。
+
+<img alt="アプリIDとアプリシークレット" src={AppIdSecretSrc} width="600px" />
+
+#### Logto管理APIへのアクセス
+
+このアプリを[管理API](/docs/references/core/#management-api)のアクセスに使用したい場合は、Advanced settingsタブで"Enable admin access"を有効にすることを忘れないでください。
+
+<img alt="API識別子" src={EnableAdminAccessSrc} width="600px" />
+
+### APIリソースを見つける
+
+APIリソースタブで、アプリがアクセスする必要があるAPI識別子を見つけます。LogtoにAPIリソースを追加していない場合やAPIリソースがわからない場合は、[APIリソース](/docs/references/resources)を参照してください。
+
+<img alt="API識別子" src={AppIdentifierSrc} width="600px" style={{ paddingBottom: '12px' }} />
+
+:::info
+Logto管理APIは、固定の識別子 `https://api.logto.io` を持つ組み込みリソースです。
+:::
+
+### リクエストを構成して送信する
+
+次に、それらをリクエストに組み込みます（**すべてが必須**）：
+
+- リクエストのエンドポイントとしてTokenエンドポイント（`https://your.logto.endpoint/oidc/token`）を使用し、メソッドには`POST`を使用します。
+- ヘッダに `Content-Type: application/x-www-form-urlencoded` を設定します。
+- [Basic authentication](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization#basic_authentication)を使用し、ユーザ名がアプリIDで、パスワードがアプリシークレットです。
+- 以下のボディデータを携帯します：
+
+```json
+{
+  "grant_type": "client_credentials",
+  "resource": "https://shopping.api", // ご使用のAPI識別子に置き換えてください
+  "scope": "scope_1 scope_2" // RBACを使用している場合は、希望するスコープに置き換えてください
+}
+```
+
+cURLを使用している場合は：
+
+```bash
+curl --location \
+  --request POST 'http://localhost:3001/oidc/token' \
+  --header 'Authorization: Basic eW91ci1hcHAtaWQ6eW91ci1hcHAtc2VjcmV0' \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'grant_type=client_credentials' \
+  --data-urlencode 'resource=https://shopping.api' \
+  --data-urlencode 'scope=scope_1 scope_2'
+```
+
+### トークンの応答
+
+成功した応答の本文は次のようになります：
+
+```json
+{
+  "access_token": "eyJhbG...2g", // このトークンをリソースにアクセスするために使用します
+  "expires_in": 3600, // 秒単位のトークンの有効期限
+  "token_type": "Bearer" // アクセストークンを使用するときの要求の認証タイプ
+}
+```
+
+## アクセストークンを使用してリソースにアクセスする
+
+トークンの応答には `token_type` フィールドが含まれるので、`Bearer`形式のHTTPヘッダの`Authorization`フィールドにアクセストークンを配置する必要があります（`Bearer YOUR_TOKEN`）。
+
+例えば、Logtoでのすべてのアプリケーションを取得するためにリソース `https://api.logto.io` でアクセストークンを要求した場合：
+
+```bash
+curl --location \
+  --request GET 'http://localhost:3001/api/applications' \
+  --header 'Authorization: Bearer eyJhbG...2g'
+```
+
+## 認証
+
+Logto管理API以外の自身のAPIリソースを保護している場合は、リソースで認証を実装することを忘れないでください。詳細については、[APIを保護する](/docs/recipes/protect-your-api#validate-the-api-requests-authorization-token)を参照してください。

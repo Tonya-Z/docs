@@ -1,0 +1,220 @@
+```markdown
+import ConnectorPlatformIntro from './fragments/_connector_platform_intro.mdx';
+import ConnectorStorageIntro from './fragments/_connector_storage_intro.mdx';
+import ConnectorTypeIntro from './fragments/_connector_type_intro.mdx';
+
+# 🔌 コネクタ
+
+## はじめに
+
+### コネクタとは？
+
+_コネクタ_ はLogtoにおいて非常に重要な役割を果たします。コネクタのおかげで、Logtoはエンドユーザにパスワードレスの登録やサインイン、ソーシャルアカウントでのサインインの機能を可能にします。ウェブサイトやアプリケーションの人気が高まるにつれて、パスワードレスとソーシャルサインインは、ユーザーが多数のアカウントとパスワードを管理する必要をなくすために利用されます。
+
+😯 興味深いですね？既存のコネクタを設定したい場合は「[コネクタの設定](../../recipes/configure-connectors/README.md)」を参照してください。設定したいコネクタが見つからない場合は、「[コネクタの作成](../../recipes/create-your-connector/README.md)」のガイドに従ってコネクタの開発ができます。
+
+## 構成
+
+コネクタデータには多くの属性があります。
+
+データの読み込みと更新をより効率的にするために、頻繁に変更されるコネクタデータの一部をDBに保存し、残りはローカルに保存します。
+
+<ConnectorStorageIntro />
+
+## コネクタのローカルストレージ：_ConnectorMetadata_
+
+### id
+
+_id_ はLogtoにおいてコネクタを識別するための_ユニーク_な文字列型キーです。
+
+コネクタの開発者によって割り当てられ、DBにアップロードされます。
+
+### target
+
+_target_ はソーシャルコネクタのソーシャルアイデンティティのソースを区別するための小文字の文字列です。
+
+Logtoユーザーは、より理解しやすいようにこの変数を「アイデンティティプロバイダの名前」と考えることができます。
+
+例えば、GoogleアカウントでLogtoにサインインする場合、あなたの_target_は_google_であるべきです。_target_の値は任意の空でない文字列で構いませんが、変更できないため分かりやすく保つことをお勧めします。同じ_target_とプラットフォームを持つ複数のコネクタの存在を許さないことに留意してください。一方で、異なるプラットフォームで同じ_target_を持つソーシャルコネクタを持つことは可能です。例えば、ユーザーがスマートフォンで_WeChat_経由でログインしたい場合は、_WeChat_のTOUにより、ネイティブの_WeChat_アプリが必要です。同時に、ウェブアプリケーションへのログインを可能にするためにウェブ_WeChat_アプリも必要です。これらの2つの_WeChat_アプリは同じアイデンティティプロバイダを共有し、同じターゲットを持つべきです。
+
+_target_は複雑な概念であるため、異なるユースケースとユーザーへの提案を結論付けました。
+
+<table class="simple-table">
+  <tbody>
+    <tr>
+      <td></td>
+      <td>例</td>
+      <td>シナリオ</td>
+      <td>結果</td>
+      <td>推奨？</td>
+    </tr>
+    <tr>
+      <td>
+        異なるIdPと異なる<em>ターゲット</em>
+      </td>
+      <td>
+        1. GitHubコネクタ (ターゲット: <code>github</code>)<br />
+        2. Googleコネクタ (ターゲット: <code>google</code>){' '}
+      </td>
+      <td>GitHubとGoogleアカウントの両方でログインをサポートするアプリ。</td>
+      <td>最も一般的なユースケース。</td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td>
+        異なるIdPと同じ<em>ターゲット</em>
+      </td>
+      <td>
+        1. GitHubコネクタ (ターゲット: <code>github</code>)<br />
+        2. Googleコネクタ (ターゲット: <code>github</code>){' '}
+      </td>
+      <td>該当なし</td>
+      <td>
+        ユーザーが他のユーザーのGitHubアカウントを使用して作成されたLogtoアカウントにサインインする可能性があります。
+      </td>
+      <td>❌</td>
+    </tr>
+    <tr>
+      <td>
+        同じIdPと異なる<em>ターゲット</em>
+      </td>
+      <td>
+        1. GitHubコネクタ (ターゲット: <code>github</code>)<br />
+        2. OAuth GitHubコネクタ (ターゲット: <code>github_oauth</code>){' '}
+      </td>
+      <td>
+        GitHubコネクタはアプリケーションA用に使用され、OAuth GitHubコネクタはアプリケーションB用に特別に作成されました。
+      </td>
+      <td>
+        これら2つの異なるコネクタを使用してLogtoにサインインしても、ユーザーが同じGitHubアカウントを使用していたとしても、常に別々のLogtoアカウントが作成されます。
+      </td>
+      <td>
+        ➖<br />
+        ユーザープールを分割することが唯一のシナリオですが、このユースケースを処理するためには通常、2つの別々のテナントを作成することがベストプラクティスとされています。
+      </td>
+    </tr>
+    <tr>
+      <td>
+        同じIdPと同じ<em>ターゲット</em>
+      </td>
+      <td>
+        1. GitHubコネクタ (ターゲット: <code>github</code>)<br />
+        2. OAuth GitHubコネクタ (ターゲット: <code>github</code>){' '}
+      </td>
+      <td>該当なし</td>
+      <td>これら2つのいずれかのコネクタを使用すると、まったく同じ結果になります。</td>
+      <td>
+        ➖<br />
+        本質的に同じことをする2つのコネクタを作成することはエンドユーザーに混乱を招くだけであり、あまり意味がありません。特定のユースケースに合った1つのコネクタを使用する方がよいでしょう。
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+### type
+
+_type_ はコネクタの種類を記録する属性です。
+
+機能に基づいて、コネクタを3つの異なるタイプに分類しています：
+
+<ConnectorTypeIntro />
+
+### platform
+
+_platform_ はコネクタが構築されるプラットフォームを識別するために使用されます。
+
+_platform_ は `null` または以下の文字列型値のいずれかでなければなりません：
+
+<ConnectorPlatformIntro />
+
+:::note
+_Email Connectors_ と _SMS Connectors_ の _platform_ は常に `null` であるべきです。<br/>
+_social Connectors_ のみがNULL以外の _platform_ 値を持つことができます。
+:::
+
+### name
+
+_name_ はi18n国コードがキーであり、コネクタの表示名が値であるオブジェクトです。
+
+### description
+
+_description_ もi18n国コードがキーであり、簡潔なコネクタの説明が値であるオブジェクトです。
+
+:::note
+クライアント側でi18nディスプレイをサポートするために、_name_（および_description_）のプロパティを、国コードをキーとし、ローカル文字での名前（または説明）を値とするマップとして保存します。
+:::
+
+### logo
+
+_logo_ はコネクタのロゴのURLまたは相対パスです。
+
+### logoDark
+
+_logoDark_ はコネクタのダークモードロゴのURLまたは相対パスで、_nullable_です。
+
+:::note
+_logo_ は常に必要であり、_logoDark_ はオプションです。
+
+ライトモードでは _logo_ を表示し、ダークモードでは存在する場合は _logoDark_ を表示します。さもなくばダークモードで _logo_ を表示します。
+:::
+
+### isStandard
+
+_isStandard_ はソーシャルコネクタが「スタンダード」コネクタであるかどうかを識別するための任意の真偽値の属性です。真の `isStandard` 属性を持っていることで「標準」コネクタを識別できます。
+
+:::note
+Logtoは「標準」ソーシャルコネクタのみをサポートしています。つまり、LogtoのすべてのSmsまたはEmailコネクタは「標準」ではありません。
+
+Logtoは、オープンで標準的なプロトコル（例：OAuth、OIDC、SAMLなど）に基づいて構築されたコネクタを「標準」と呼んでいます。Logtoのユーザーは、この文脈に基づいて各「標準」コネクタの複数のインスタンスを構築することが期待されています。例えば、Logtoが既にOAuth標準コネクタを提供している場合、ユーザーは「OAuth GitHub コネクタ」、「OAuth Google コネクタ」、および「OAuth Facebook コネクタ」のインスタンスを構築できます。これらはすべて、LogtoのOAuth標準コネクタに基づいています。
+
+Logtoのコネクタ設計に精通している場合、現時点ではSmsまたはEmailコネクタは同時に最大1つしか存在できないため、「標準」SmsまたはEmailコネクタは必要ありません。
+:::
+
+### readme
+
+_readme_ はコネクタのREADMEマークダウンファイルの相対パスであり、コネクタの設定中に「管理コンソール」で表示される内容です。
+
+### configTemplate
+
+_configTemplate_ はコネクタの設定例の相対パスです。
+
+## コネクタのリモートストレージ：_Connector DB_
+
+### id
+
+_id_ はコネクタをDBで識別するためのランダムに生成された文字列型キーであり、コネクタDBの主キーとして機能します。
+
+### connectorId
+
+_connectorId_ は文字列型のキーであり、_Connector DB_ と _ConnectorMetadata_ を整合させる唯一の橋渡しです。コネクタDBデータとコネクタコードモジュールのペアが一致する場合、_connectorId_ は常にコードモジュールの [metadata._id_](#id) に等しいです。
+
+### metadata
+
+_metadata_ は[ConnectorMetadata](#connectors-local-storage-connectormetadata)のサブセットであり、[_logo_](#logo)、[_logoDark_](#logodark)、[_target_](#target)および[_name_](#name)などの設定可能な属性を含んでいます。
+
+### syncProfile
+
+_syncProfile_ はユーザープロファイルの更新スキームを決定するための真偽値で、デフォルトはFALSEです。
+```
+_syncProfile_がFALSEの場合、Logtoユーザーの基本情報（名前とアバターを含む）は、このコネクター経由で初めてLogtoにサインアップしたときのみ更新されます。それ以外の場合は、ユーザーがコネクターを通じてLogtoにサインインするたびに、Logtoアカウントプロファイルが更新されます。
+
+### config
+
+_config_ は任意の非空のオブジェクトである必要があります。
+
+これはコネクターが自分の設定を保管する場所です。各コネクターは_config_内に異なるプロパティを持ち、DBに保存される前に妥当であることが求められています（コネクターによって「妥当」という基準は異なります）。_config_の有効性がチェックされたもののみがDBに更新され、そうでなければエラーが発生します。
+
+開発者は自身のコネクターを開発する際、_config_ガードを実装することが要求されます。詳細は「[あなたのコネクターを作成する](../../recipes/create-your-connector/README.md)」をご覧ください。
+
+_config_のサンプルを一目で見たいですか？「[コネクターを設定する](../../recipes/configure-connectors/README.md)」または各コネクターの設定ページにアクセスしてください。
+
+:::note
+現在のLogtoバージョンでは、同時に _Sms/Email_ コネクターは1つのみ存在でき、同じタイプの他のコネクターは自動的に削除されます。
+
+このルール、唯一機能するSMSまたはEmailコネクターは、_Social_コネクターには適用されません。<br/>
+つまり、複数の_Social_コネクターを追加することができます。
+:::
+
+### createdAt
+
+_createdAt_は、DBにコネクターが作成された時間を追跡するための自動生成されるタイムスタンプ文字列です。
